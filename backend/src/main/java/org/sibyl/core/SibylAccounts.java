@@ -1,7 +1,6 @@
 package org.sibyl.core;
 
-import jakarta.annotation.PostConstruct;
-import java.sql.ResultSet;
+import org.springframework.boot.ApplicationRunner;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.userdetails.User;
@@ -13,14 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SibylAccounts implements UserDetailsService {
+public class SibylAccounts implements UserDetailsService, ApplicationRunner {
     private final JdbcTemplate jdbc;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     public SibylAccounts(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
-    @PostConstruct
-    public void bootstrap() {
+    @Override
+    public void run(org.springframework.boot.ApplicationArguments arguments) {
         // First installation only. Never overwrite an existing password or recreate a deleted admin.
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM sibyl_users", Integer.class);
         if (count != null && count == 0) {
