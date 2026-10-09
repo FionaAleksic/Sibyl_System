@@ -14,6 +14,7 @@ echo "Installing Sibyl Core $VERSION with local PostgreSQL"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends postgresql postgresql-client openjdk-21-jre-headless curl openssl ca-certificates
+systemctl enable --now postgresql
 install -d -o root -g root -m 0700 /etc/sibyl
 install -d -o root -g root -m 0755 /opt/sibyl
 if ! id sibyl >/dev/null 2>&1; then
