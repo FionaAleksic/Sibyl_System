@@ -1,6 +1,8 @@
 name: Build & Publish Sibyl Core Release (MySQL)
 
 on:
+  push:
+    branches: [test]
   workflow_dispatch:
     inputs:
       version:
