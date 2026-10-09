@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "provider": "github",
+  "releaseOnly": true,
+  "modules": [
+    {
+      "id": "Sibyl.ad",
+      "repo": "FionaAleksic/Sibyl.ad",
+      "name": "Active Directory",
+      "type": "integration"
+    },
+    {
+      "id": "Sibyl.inventory",
+      "repo": "FionaAleksic/Sibyl.inventory",
+      "name": "Inventar",
+      "type": "feature"
+    },
+    {
+      "id": "Sibyl.planning",
+      "repo": "FionaAleksic/Sibyl.planning",
+      "name": "Planung",
+      "type": "feature"
+    },
+    {
+      "id": "Sibyl.doc",
+      "repo": "FionaAleksic/Sibyl.doc",
+      "name": "Dokumentation",
+      "type": "feature"
+    }
+  ]
+}
