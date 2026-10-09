@@ -37,20 +37,24 @@ public class GitHubReleaseService {
 
     private HttpRequest request(URI uri, String accept) {
         String token = System.getenv("SIBYL_GITHUB_TOKEN");
-        if (token == null || token.isBlank()) {
-            throw new IllegalStateException("SIBYL_GITHUB_TOKEN is required for the private GitHub repositories");
-        }
         if (!Objects.equals(uri.getHost(), "api.github.com") || !"https".equals(uri.getScheme()))
             throw new IllegalArgumentException("Invalid GitHub API endpoint");
-        return HttpRequest.newBuilder(uri).header("Accept", accept)
-                .header("Authorization", "Bearer " + token)
+        // Public repositories work without any token: every Sibyl installation can query them.
+        // Private repositories remain opt-in and require a SERVER-SIDE token.
+        HttpRequest.Builder request = HttpRequest.newBuilder(uri)
+                .header("Accept", accept)
+                .header("User-Agent", "Sibyl-System-Addon-Manager")
                 .header("X-GitHub-Api-Version", "2022-11-28")
-                .timeout(Duration.ofSeconds(20)).GET().build();
+                .timeout(Duration.ofSeconds(20)).GET();
+        if (token != null && !token.isBlank()) {
+            request.header("Authorization", "Bearer " + token);
+        }
+        return request.build();
     }
 
     public ReleaseInfo latest(AddonCatalog.Addon addon, String channel) throws Exception {
         if (!channel.equals("stable") && !channel.equals("prerelease")) throw new IllegalArgumentException("Unknown channel");
-        String suffix = channel.equals("stable") ? "/releases/latest" : "/releases?per_page=20";
+        String suffix = channel.equals("stable") ? "/releases/latest" : "/releases?per_page=100";
         URI uri = URI.create(API + addon.repo() + suffix);
         HttpResponse<String> response = http.send(request(uri, "application/vnd.github+json"),
                 HttpResponse.BodyHandlers.ofString());
@@ -72,8 +76,11 @@ public class GitHubReleaseService {
         if (!tag.matches("v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?"))
             throw new IOException("Release tag is not a supported SemVer");
         JsonNode found = null;
+        // Never download a generic source archive or an unrelated asset.
+        // Every add-on ships exactly one versioned ZIP as a GitHub Release asset.
+        String expectedName = addon.id() + "-" + tag + ".zip";
         for (JsonNode asset : release.path("assets")) {
-            if (asset.path("name").asText("").endsWith(".zip")) { found = asset; break; }
+            if (expectedName.equals(asset.path("name").asText())) { found = asset; break; }
         }
         String digest = found == null ? "" : found.path("digest").asText("");
         return new ReleaseInfo(tag, release.path("prerelease").asBoolean(false),
@@ -93,10 +100,30 @@ public class GitHubReleaseService {
         if (release == null || !release.tag().equals(expectedTag)) throw new IllegalStateException("Release changed or unavailable");
         if (release.asset() == null || !release.digest().matches("sha256:[a-fA-F0-9]{64}"))
             throw new IllegalStateException("Verified ZIP release asset with SHA-256 digest required");
-        String url = release.asset().path("url").asText();
-        String prefix = API + addon.repo() + "/releases/assets/";
-        if (!url.startsWith(prefix) || !url.substring(prefix.length()).matches("[0-9]+"))
-            throw new IllegalStateException("Unexpected asset URL");
+        // GitHub REST API asset endpoints are best for private repos with a token.
+        // Public repos use the public, published browser_download_url (no token).
+        String token = System.getenv("SIBYL_GITHUB_TOKEN");
+        boolean privateAccess = token != null && !token.isBlank();
+        String url = privateAccess
+                ? release.asset().path("url").asText("")
+                : release.asset().path("browser_download_url").asText("");
+        String expectedName = addon.id() + "-" + release.tag() + ".zip";
+        URI source = URI.create(url);
+        if (!"https".equalsIgnoreCase(source.getScheme())
+                || source.getRawQuery() != null || source.getRawFragment() != null
+                || source.getUserInfo() != null || source.getPort() != -1)
+            throw new IllegalStateException("Invalid GitHub asset source");
+        if (privateAccess) {
+            String prefix = "/repos/" + addon.repo() + "/releases/assets/";
+            if (!"api.github.com".equals(source.getHost())
+                    || !source.getPath().startsWith(prefix)
+                    || !source.getPath().substring(prefix.length()).matches("[0-9]+"))
+                throw new IllegalStateException("Unexpected private GitHub asset URL");
+        } else {
+            String expectedPath = "/" + addon.repo() + "/releases/download/" + release.tag() + "/" + expectedName;
+            if (!"github.com".equals(source.getHost()) || !expectedPath.equals(source.getPath()))
+                throw new IllegalStateException("Unexpected public GitHub asset URL");
+        }
         if (release.asset().path("size").asLong(Long.MAX_VALUE) > MAX_DOWNLOAD)
             throw new IllegalStateException("Release ZIP exceeds size limit");
         if (isDownloaded(addon)) throw new IllegalStateException("This add-on already has one downloaded version");
@@ -105,7 +132,13 @@ public class GitHubReleaseService {
         Files.createDirectories(dir);
         Path tmp = Files.createTempFile(dir, ".pending-", ".zip");
         try {
-            var response = http.send(request(URI.create(url), "application/octet-stream"),
+            HttpRequest downloadRequest = privateAccess
+                    ? request(source, "application/octet-stream")
+                    : HttpRequest.newBuilder(source)
+                        .header("Accept", "application/octet-stream")
+                        .header("User-Agent", "Sibyl-System-Addon-Manager")
+                        .timeout(Duration.ofSeconds(30)).GET().build();
+            var response = http.send(downloadRequest,
                     HttpResponse.BodyHandlers.ofInputStream());
             if (response.statusCode() == 302 || response.statusCode() == 303 ||
                     response.statusCode() == 307 || response.statusCode() == 308) {
@@ -129,7 +162,7 @@ public class GitHubReleaseService {
             }
             String host = response.uri().getHost().toLowerCase(Locale.ROOT);
             if (!(host.equals("api.github.com") || host.equals("objects.githubusercontent.com") ||
-                    host.equals("release-assets.githubusercontent.com")))
+                    host.equals("release-assets.githubusercontent.com") || host.equals("github.com")))
                 throw new IOException("Asset outside approved GitHub endpoints");
             MessageDigest dig = MessageDigest.getInstance("SHA-256");
             int total = 0;
