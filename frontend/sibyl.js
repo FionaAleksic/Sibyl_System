@@ -1,4 +1,4 @@
-/* Sibyl global branding comes from the platform PostgreSQL database.
+/* Sibyl global branding comes from the platform MySQL database.
  * Only a browser-local theme preference remains in localStorage.
  */
 (function(){
