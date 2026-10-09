@@ -2,7 +2,7 @@ spring:
   application:
     name: sibyl-core
   datasource:
-    url: ${SIBYL_DB_URL:jdbc:postgresql://127.0.0.1:5432/sibyl}
+    url: ${SIBYL_DB_URL:jdbc:mysql://127.0.0.1:3306/sibyl?sslMode=REQUIRED&connectionTimeZone=UTC}
     username: ${SIBYL_DB_USER:sibyl}
     password: ${SIBYL_DB_PASSWORD:}
     hikari:
