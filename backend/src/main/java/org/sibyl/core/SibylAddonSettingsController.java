@@ -32,7 +32,7 @@ public class SibylAddonSettingsController {
     public Map<String,Object> get(@PathVariable String id) {
         validAddon(id);
         var rows = jdbc.query(
-            "SELECT settings_json::text FROM sibyl_addon_settings WHERE addon_id=?",
+            "SELECT CAST(settings_json AS CHAR) FROM sibyl_addon_settings WHERE addon_id=?",
             (rs,n) -> rs.getString(1), id);
         try {
             JsonNode value = rows.isEmpty()?mapper.createObjectNode():mapper.readTree(rows.get(0));
@@ -53,9 +53,9 @@ public class SibylAddonSettingsController {
         }
         jdbc.update("""
             INSERT INTO sibyl_addon_settings (addon_id, settings_json)
-            VALUES (?, CAST(? AS jsonb))
-            ON CONFLICT (addon_id) DO UPDATE
-            SET settings_json=EXCLUDED.settings_json, updated_at=CURRENT_TIMESTAMP
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE
+              settings_json=VALUES(settings_json), updated_at=CURRENT_TIMESTAMP(6)
             """, id, data.toString());
         jdbc.update("INSERT INTO sibyl_audit_events (actor, action) VALUES (?, ?)",
             principal.getName(), "addon-settings-updated:" + id);
