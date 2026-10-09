@@ -28,7 +28,7 @@ public class GitHubReleaseService {
     private final ObjectMapper mapper;
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
-            .followRedirects(HttpClient.Redirect.NORMAL).build();
+            .followRedirects(HttpClient.Redirect.NEVER).build();
     private final Path root = Path.of(System.getenv().getOrDefault("SIBYL_ADDON_DATA", "/var/lib/sibyl/addons"));
 
     public record ReleaseInfo(String tag, boolean prerelease, String body, JsonNode asset, String digest) { }
@@ -107,14 +107,30 @@ public class GitHubReleaseService {
         try {
             var response = http.send(request(URI.create(url), "application/octet-stream"),
                     HttpResponse.BodyHandlers.ofInputStream());
+            if (response.statusCode() == 302 || response.statusCode() == 303 ||
+                    response.statusCode() == 307 || response.statusCode() == 308) {
+                URI target = response.uri().resolve(response.headers().firstValue("location")
+                        .orElseThrow(() -> new IOException("GitHub asset redirect has no Location")));
+                try (InputStream discarded = response.body()) { }
+                String targetHost = target.getHost() == null ? "" : target.getHost().toLowerCase(Locale.ROOT);
+                if (!"https".equalsIgnoreCase(target.getScheme()) ||
+                    !(targetHost.equals("release-assets.githubusercontent.com") ||
+                      targetHost.equals("objects.githubusercontent.com")))
+                    throw new IOException("GitHub asset redirected to unapproved host");
+                // Do not forward the private GitHub API bearer token to asset/CDN hosts.
+                response = http.send(HttpRequest.newBuilder(target)
+                        .header("Accept", "application/octet-stream")
+                        .timeout(Duration.ofSeconds(60)).GET().build(),
+                        HttpResponse.BodyHandlers.ofInputStream());
+            }
             if (response.statusCode() != 200) {
                 try (InputStream ignored = response.body()) { }
                 throw new IOException("Release download returned HTTP " + response.statusCode());
             }
             String host = response.uri().getHost().toLowerCase(Locale.ROOT);
             if (!(host.equals("api.github.com") || host.equals("objects.githubusercontent.com") ||
-                    host.equals("release-assets.githubusercontent.com") || host.equals("github.com")))
-                throw new IOException("Asset redirected outside approved GitHub endpoints");
+                    host.equals("release-assets.githubusercontent.com")))
+                throw new IOException("Asset outside approved GitHub endpoints");
             MessageDigest dig = MessageDigest.getInstance("SHA-256");
             int total = 0;
             try (InputStream in = response.body(); var out = Files.newOutputStream(tmp)) {
