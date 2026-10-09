@@ -11,7 +11,7 @@
 - Quellen müssen vor Aufnahme ins Organisations-Repository/Allowlist geprüft werden; keine vom Nutzer frei eingegebenen ZIP-URLs herunterladen.
 - Fehlender Release ist ein sichtbarer Zustand `KEIN_RELEASE`. Niemals automatisch auf `main` oder `test` zurückfallen.
 - Backend-JARs/JS aus unbekannten ZIPs dürfen ohne Isolierung/Signaturprüfung nicht gestartet werden.
-- Repositories (Stand 09.10.2026): `Sibyl_System` (Core), `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning`, `Sibyl.doc`. Releases geprüft: **alle fünf noch leer**.
+- Repositories (Stand 09.10.2026): `Sibyl_System` (Core), `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning`, `Sibyl.doc`. Veröffentlicht: **`Sibyl.ad v0.1.0-rc.1`**, **`Sibyl_System v0.1.0-rc.1`**. Weitere Pre-Releases werden erst nach bestandenen Tests freigegeben.
 - Zu klären/neue Repositories: `Sibyl.search`, `Sibyl.network`, `Sibyl.training-log`, `Sibyl.courses`, optional `Sibyl.wiki`. Diese existieren in der geprüften Repo-Liste bislang nicht.
 - Cloud/Lab auf Cluster 3 benötigt vor produktiver Nutzung eine echte DMZ. Ein normaler LAN-VM-Adapter ist keine DMZ.
 
