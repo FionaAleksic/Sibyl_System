@@ -48,6 +48,8 @@ jobs:
         run: |
           bash -n deploy/standard/install-ubuntu-2404.sh
           bash -n deploy/cluster3/activate-mysql-core.sh
+          bash -n deploy/cluster3/provision-unattended.sh
+          bash -n deploy/cluster3/bootstrap-mysql-db.sh
       - name: Migrate database and exercise login, reset, and configuration APIs
         working-directory: backend
         run: mvn --batch-mode --no-transfer-progress clean verify
