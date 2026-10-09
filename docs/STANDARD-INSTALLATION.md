@@ -1,6 +1,6 @@
 # Sibyl System – Standardinstallation mit MySQL 8
 
-**Version:** Entwicklung `v0.1.0-rc.3` · **Nur vorläufige Tests / Pre-Release.**
+**Version:** Entwicklung `v0.1.0-rc.4` · **Nur vorläufige Tests / Pre-Release.**
 
 ## Zweck
 
@@ -10,7 +10,7 @@ Die allgemein nutzbare, firmenneutrale Sibyl-Standardinstallation besteht aus Co
 
 Der Installer `install-sibyl-ubuntu-2404.sh` wird **als Asset des veröffentlichten GitHub-Core-Releases** bereitgestellt. Nur auf einem frischen und eigens dafür vorgesehenen Ubuntu-24.04-Server ausführen. Das Installationsscript vor der Ausführung prüfen.
 
-1. Auf GitHub den veröffentlichten Core-Release `v0.1.0-rc.3` mit dem Installer und SHA256SUMS abrufen und die Dateiintegrität kontrollieren.
+1. Auf GitHub den veröffentlichten Core-Release `v0.1.0-rc.4` mit dem Installer und SHA256SUMS abrufen und die Dateiintegrität kontrollieren.
 2. Als Administrator auf einem **neuen** Ubuntu-24.04-Server `sudo bash install-sibyl-ubuntu-2404.sh` ausführen.
 3. Der Installer installiert `mysql-server`, `mysql-client`, Java 21 und notwendige Systemwerkzeuge. Er aktiviert den lokalen MySQL-Dienst und legt die Datenbank `sibyl` in `utf8mb4`/InnoDB mit eigenem Datenbankkonto und zufällig generiertem Passwort an.
 4. Das Datenbankpasswort bleibt nur in der root-lesbaren lokalen Datei `/etc/sibyl/core.env` (0600). Es wird weder ins GitHub-Repo, HTML/JavaScript noch in die Startausgabe geschrieben.
@@ -90,6 +90,14 @@ MySQL-spezifisch: `BIGINT AUTO_INCREMENT`, `DATETIME(6)`, native `JSON`, `ON DUP
 
 Der Core startet nur, wenn die MySQL-Datenbank erreichbar ist und erforderliche Migrationen erfolgreich waren. Updates dürfen keine unbekannten oder alten DB-Versionen ungefragt zurücksetzen.
 
+## Vollautomatisierter Installationsablauf
+
+**Standardinstallation (ein Server):** Nach dem Start des signatur- und SHA-256-verifizierten Release-Installers erfolgen Paketinstallation, MySQL-Bereitstellung, Datenbankkonto, 256-Bit-Zufallspasswort, Download des geprüften Core-JARs, systemd-Start und Datenbankmigration **ohne Rückfrage**. Nur ein vertrauenswürdiger HTTPS-Reverse-Proxy / eine passende interne PKI müssen vor tatsächlichem externem Einsatz bereitstehen. Der einmalige Passwortwechsel für `admin` nach dem ersten Login bleibt aus Sicherheitsgründen erforderlich.
+
+**Clusterinstallation (getrennte VMs):** Der GitHub-Release enthält ein Installer-Bundle mit `provision-unattended.sh`, `bootstrap-mysql-db.sh` und `activate-mysql-core.sh`. Ein **autorisierter** Deployment-Controller mit SSH-Schlüssel, geprüften Hostkeys und erlaubten sudo-Regeln führt den gesamten Ablauf ohne manuelle Passwortabfrage durch. Er erzeugt den DB-Schlüssel einmal selbst (oder übernimmt das bereits bestehende lokal geschützte Secret), provisioniert MySQL auf der DB-VM, legt das Secret ausschließlich über den genehmigten SSH-Transport auf der App-VM ab, prüft den Release-Digest, aktiviert den Core mit Rollback und führt Health-/API-Tests aus.
+
+Das Script verlangt die ausdrückliche Zielwahl `SIBYL_TARGET=cluster3-lab`, um andere Cluster nicht versehentlich zu bearbeiten. Es darf **nicht** als Workaround ausgeführt werden, wenn die Sicherheitsrichtlinie eines Remotetools die Secret-Übertragung untersagt. In diesem Fall stoppt der Installer ohne Core-Umschaltung; die Freigabe eines zugelassenen Secret-/Deployment-Kanals ist eine organisatorische Voraussetzung. Das ist **keine** technische Handarbeit pro Installation, sondern einmalige Infrastruktur-Autorisierung.
+
 ## Separate DB-VM auf Cluster 3
 
 Das bestehende, isolierte Entwicklungssetup besteht aus:
@@ -102,6 +110,6 @@ Das bestehende, isolierte Entwicklungssetup besteht aus:
 
 Für diese **Mehr-VM-Umgebung** wird MySQL auf VM202 installiert und mit `require_secure_transport=ON` betrieben, auf `172.22.120.242:3306` gebunden und der Datenbankport ausschließlich von `.241` über die Firewall freigegeben. Der DB-Benutzer `sibyl@172.22.120.241` besitzt Datenbankrechte nur auf `sibyl.*`. Die App erhält einen **sicher übermittelten** DB-Zugang ausschließlich über eine root-lesbare Konfigurationsdatei und nutzt `jdbc:mysql://172.22.120.242:3306/sibyl?sslMode=REQUIRED&connectionTimeZone=UTC`. Für eine Produktivumgebung sollte `sslMode=VERIFY_IDENTITY` mit vertrauenswürdiger MySQL-Server-CA verwendet werden.
 
-**Stand der Cluster-3-Migration:** Die MySQL-Datenbank auf `.242` ist eingerichtet, aber die Übergabe der geheimen Datenbankzugangsdaten an `.241` wurde von einer Remote-Sicherheitsprüfung blockiert. Der Core auf `.241` läuft weiterhin auf `v0.1.0-rc.1`, damit der interne Browser nicht unterbrochen wird. Eine MySQL-Core-Umschaltung oder die erste Admin-Anmeldung in MySQL auf Cluster 3 darf erst als erledigt gelten, wenn der sichere Zugriff geklärt, ein veröffentlichtes MySQL-Core-Release vorhanden und die Anwendung mit echten Datenbanktests abgenommen wurde.
+**Stand der Cluster-3-Migration:** Die MySQL-Datenbank auf `.242` ist eingerichtet. Der neue unbeaufsichtigte Cluster-Installer liegt im Code, aber seine Ausführung auf den Firmen-VMs ist noch durch die Remote-Sicherheitsprüfung beim Geheimnistransfer blockiert. Der Core auf `.241` läuft weiterhin auf `v0.1.0-rc.1`, damit der interne Browser nicht unterbrochen wird. Eine MySQL-Core-Umschaltung oder die erste Admin-Anmeldung in MySQL auf Cluster 3 darf erst als erledigt gelten, wenn der sichere Zugriff geklärt, ein veröffentlichtes MySQL-Core-Release vorhanden und die Anwendung mit echten Datenbanktests abgenommen wurde.
 
 **Grenzen:** Die vorhandenen Produktiv- und älteren Testsysteme werden nicht verändert. Ein LAN-gebundener Edge-Server ist keine DMZ.
