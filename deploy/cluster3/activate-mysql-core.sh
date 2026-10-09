@@ -9,8 +9,11 @@ umask 077
   echo "Requires root on sibyl-app-lab only"; exit 1;
 }
 OLD=/opt/sibyl/sibyl-core-0.1.0-rc.1.jar
-NEW=/opt/sibyl/sibyl-core-0.1.0-rc.3.jar
-CHECKSUM=1c516b0f7ee541a0bdccb0e18f8ee72aa4be2fae2b02e4de0f6f1a68fcce01e0
+VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.3}"
+NEW="/opt/sibyl/sibyl-core-${VERSION}.jar"
+CHECKSUM="${SIBYL_CORE_SHA256:-1c516b0f7ee541a0bdccb0e18f8ee72aa4be2fae2b02e4de0f6f1a68fcce01e0}"
+[[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] || exit 1
+[[ "$CHECKSUM" =~ ^[a-fA-F0-9]{64}$ ]] || exit 1
 ENVFILE=/etc/sibyl/core.env
 UNIT=/etc/systemd/system/sibyl-core.service
 SECRET_FILE=/etc/sibyl/mysql-lab.password
@@ -25,16 +28,14 @@ echo "$CHECKSUM  $NEW" | sha256sum --check --status || {
 command -v mysql >/dev/null || {
   echo "Install mysql-client on this VM first"; exit 1;
 }
-if [[ -r "$SECRET_FILE" ]]; then
-  pass="$(cat "$SECRET_FILE")"
-elif [[ -t 0 ]]; then
-  printf 'MySQL sibyl account password (input hidden): ' >&2
-  IFS= read -r -s pass
-  printf '\n' >&2
-else
-  echo "No root-only secret file or interactive terminal available" >&2
+[[ -f "$SECRET_FILE" && ! -L "$SECRET_FILE" ]] || {
+  echo "No machine-provisioned MySQL secret. Refusing interactive fallback." >&2
   exit 1
-fi
+}
+[[ "$(stat -c '%a' "$SECRET_FILE")" == 600 ]] || {
+  echo "MySQL secret file must be mode 0600"; exit 1;
+}
+pass="$(cat "$SECRET_FILE")"
 [[ "$pass" =~ ^[a-f0-9]{64}$ ]] || { echo "Wrong secret format"; unset pass; exit 1; }
 # Validate MySQL access BEFORE touching the existing Core service.
 testres="$(MYSQL_PWD="$pass" mysql --protocol=TCP --ssl-mode=REQUIRED \
@@ -51,12 +52,20 @@ echo "MySQL encrypted connection and account validated"
 install -d -o root -g root -m 0700 "$BACKUP_DIR"
 cp -a "$ENVFILE" "$BACKUP_DIR/core.env"
 cp -a "$UNIT" "$BACKUP_DIR/sibyl-core.service"
+if [[ -L /opt/sibyl/current-cluster.jar ]]; then
+  cp -a /opt/sibyl/current-cluster.jar "$BACKUP_DIR/current-cluster.jar"
+fi
 rollback() {
   local result="$?"
   if [[ "$result" != 0 ]]; then
     echo "Migration failed; restoring previous application service/configuration" >&2
     cp -a "$BACKUP_DIR/core.env" "$ENVFILE"
     cp -a "$BACKUP_DIR/sibyl-core.service" "$UNIT"
+    if [[ -L "$BACKUP_DIR/current-cluster.jar" ]]; then
+      cp -a "$BACKUP_DIR/current-cluster.jar" /opt/sibyl/current-cluster.jar
+    else
+      rm -f /opt/sibyl/current-cluster.jar
+    fi
     systemctl daemon-reload
     systemctl restart sibyl-core || true
   fi
@@ -78,7 +87,7 @@ unset pass
 
 cat >"$UNIT" <<'UNIT'
 [Unit]
-Description=Sibyl Core v0.1.0-rc.3 (MySQL)
+Description=Sibyl Core (MySQL, managed release)
 After=network-online.target
 Wants=network-online.target
 [Service]
@@ -87,7 +96,7 @@ User=sibyl
 Group=sibyl
 EnvironmentFile=/etc/sibyl/core.env
 WorkingDirectory=/var/lib/sibyl
-ExecStart=/usr/bin/java -XX:MaxRAMPercentage=65 -jar /opt/sibyl/sibyl-core-0.1.0-rc.3.jar
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=65 -jar /opt/sibyl/current-cluster.jar
 Restart=on-failure
 RestartSec=6
 NoNewPrivileges=true
@@ -102,12 +111,13 @@ LimitNOFILE=8192
 WantedBy=multi-user.target
 UNIT
 chmod 0644 "$UNIT"
+ln -sfn "$NEW" /opt/sibyl/current-cluster.jar
 systemctl daemon-reload
 systemctl restart sibyl-core
 for attempt in $(seq 1 35); do
   if curl -fsS --max-time 3 http://172.22.120.241:8080/actuator/health >/dev/null &&
      curl -fsS --max-time 3 http://172.22.120.241:8080/api/v1/settings/public | grep -q 'organization'; then
-    echo "MYSQL_CORE_RUNNING: v0.1.0-rc.3"
+    echo "MYSQL_CORE_RUNNING: v$VERSION"
     echo "MySQL schema, admin and API started; login admin/friend must rotate on first use."
     echo "Previous version rollback files are in $BACKUP_DIR"
     exit 0
