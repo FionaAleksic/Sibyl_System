@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Sibyl System – Addon-Browser">
+  <title>Addon-Browser · Sibyl System</title>
+  <link rel="stylesheet" href="./sibyl.css">
+  <script defer src="./sibyl.js"></script><script defer src="./addons.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Zum Inhalt springen</a>
+  <header class="topbar">
+    <a href="/" class="brand" aria-label="Zur Startseite"><span class="mark" aria-hidden="true">S</span><span data-sibyl-brand>Sibyl System</span></a>
+    <nav class="module-nav" aria-label="Hauptnavigation">
+      <a href="/">Startseite</a>
+      <a href="/addons.html" class="active" aria-current="page">Addon-Browser</a>
+      <a href="/admin.html">Admin</a>
+    </nav>
+    <div class="grow"></div><button type="button" class="theme-toggle" data-theme-toggle>Darstellung: System</button>
+  </header>
+  <main id="main">
+    <div class="heading">
+      <div><div class="kicker">Erweiterungen</div><h1>Addon-Browser</h1>
+        <p>Erweitern Sie Ihre Plattform mit Modulen aus freigegebenen GitHub-Repositories.</p></div>
+    </div>
+    <div class="notice warning" role="status" id="catalog-notice">
+      <strong>Repository-Katalog</strong>
+      <p>Suche und Release-Status sind verfügbar. Die Installation wird aktiviert, sobald Sibyl Core und die GitHub-Zugriffsberechtigung eingerichtet sind.</p>
+    </div>
+    <div class="toolbar">
+      <label for="addon-search" class="small muted">Suchen</label>
+      <input class="search" type="search" id="addon-search" placeholder="Addon-Name oder ID…" autocomplete="off">
+      <label for="release-channel" class="small muted">Kanal</label>
+      <select id="release-channel" aria-label="Release-Kanal">
+        <option value="stable">Stabile Releases</option>
+        <option value="prerelease">Vorabversionen</option>
+      </select>
+      <div class="spacer"></div>
+      <span class="chip" id="count">–</span>
+      <button id="refresh" class="button secondary" type="button">Aktualisieren</button>
+    </div>
+    <div id="catalog-status" role="status" class="small muted" aria-live="polite" style="margin:0 0 16px"></div>
+    <section id="addons" class="cards" aria-label="Verfügbare Addon-Quellen"></section>
+    <section class="panel" style="margin-top:26px" aria-labelledby="about-catalog">
+      <h2 id="about-catalog">So funktionieren Erweiterungen</h2>
+      <p class="muted">Jede Erweiterung besitzt eine eindeutige ID, eigene Versionsnummern und ein separates GitHub-Repository. Sibyl installiert ausschließlich geprüfte Assets veröffentlichter Releases. Quellcode aus <code>main</code> oder <code>test</code> wird nicht als Installationspaket verwendet.</p>
+      <div class="divider"></div>
+      <h3>Weitere geplante Erweiterungen</h3>
+      <p class="muted">Suche, Network-Mapping, Berichtsheft, Kurse und weitere Integrationen können ergänzt werden, sobald ihre Repositories und Releases vorliegen.</p>
+    </section>
+  </main>
+  <footer><span>Sibyl System</span><span>Erweiterungen sind optional und versionsgebunden.</span></footer>
+</body>
+</html>
