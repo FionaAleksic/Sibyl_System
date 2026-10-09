@@ -134,6 +134,22 @@
             <p>Der integrierte Addon-Browser enthält bereits die bekannten Modul-Repositories. Der Addon-Browser fragt veröffentlichte GitHub-Releases serverseitig ab.</p>
             <div class="actions"><a href="/addons.html" class="button">Zum Addon-Browser</a></div>
             <div class="divider"></div>
+            <h3>Addon-Einstellungen</h3>
+            <p class="small muted">Erweiterte, nicht geheime Einstellungen werden zentral gespeichert. Passwörter, Tokens und andere Zugangsdaten gehören ausschließlich in den geschützten Secret-Store.</p>
+            <form id="addon-settings-form">
+              <div class="field">
+                <label for="addon-settings-id">Erweiterung</label>
+                <select id="addon-settings-id" required><option value="">Bitte Addon auswählen</option></select>
+              </div>
+              <div class="field">
+                <label for="addon-settings-json">Konfiguration (JSON)</label>
+                <textarea id="addon-settings-json" rows="8" spellcheck="false" aria-describedby="addon-settings-hint">{}</textarea>
+                <span id="addon-settings-hint" class="hint">Nur nicht geheime Werte. Eine formularbasierte Darstellung anhand der Addon-Schemata folgt.</span>
+              </div>
+              <button type="submit" class="button">Addon-Einstellungen speichern</button>
+              <p id="addon-settings-status" role="status" aria-live="polite" class="small" style="margin-top:12px"></p>
+            </form>
+            <div class="divider"></div>
             <p class="small muted">Paketinstallation, Dependencies, Aktivierung und Update-Rollback benötigen den authentifizierten Sibyl Core mit eigener Datenbank und Release-API.</p>
           </div>
         </section>
