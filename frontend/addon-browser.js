@@ -64,12 +64,18 @@ async function downloadAddon(addon,button){
   button.disabled=true;
   button.textContent='Wird geprüft …';
   try{
-    const token=document.querySelector('meta[name="csrf-token"]')?.content||'';
+    const csrfResponse=await fetch('/api/v1/admin/csrf',{credentials:'same-origin',headers:{'Accept':'application/json'}});
+    if(!csrfResponse.ok)throw new Error('CSRF-Token nicht verfügbar (HTTP '+csrfResponse.status+')');
+    const csrf=await csrfResponse.json();
     const res=await fetch('/api/v1/admin/addons/'+encodeURIComponent(addon.id)+'/download',{
-      method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':token},
+      method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',[csrf.header]:csrf.token},
       body:JSON.stringify({channel:channelEl.value,releaseTag:addon.tag})
     });
-    if(!res.ok){let reason='HTTP '+res.status;try{reason+=(await res.json()).error?' – '+(await res.clone().json()).error:''}catch{}throw new Error(reason);}
+    if(!res.ok){
+      let reason='HTTP '+res.status;
+      try{const detail=await res.json();if(detail.error)reason+=' – '+String(detail.error);}catch{}
+      throw new Error(reason);
+    }
     updateStatus(addon.name+': Release heruntergeladen und geprüft. Aktivierung erfolgt nach Freigabe.');
     await load();
   }catch(err){updateStatus('Download fehlgeschlagen: '+err.message,true);}
