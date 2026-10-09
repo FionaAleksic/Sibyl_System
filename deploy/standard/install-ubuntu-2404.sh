@@ -9,7 +9,7 @@ umask 077
 [[ "${ID:-}" == ubuntu && "${VERSION_ID:-}" == 24.04 ]] || {
   echo "Requires Ubuntu 24.04 LTS" >&2; exit 1;
 }
-VERSION="${SIBYL_VERSION:-0.1.0-rc.3}"
+VERSION="${SIBYL_VERSION:-0.1.0-rc.4}"
 [[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] ||
   { echo "Invalid release version" >&2; exit 1; }
 echo "Installing Sibyl Core $VERSION and local MySQL 8"
