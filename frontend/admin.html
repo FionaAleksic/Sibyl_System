@@ -25,8 +25,37 @@
       <p>Ihre Sibyl-Installation an die Organisation anpassen, Erweiterungen verwalten und Zugänge konfigurieren.</p>
     </div></div>
     <div class="notice warning" role="status">
-      <strong>Ersteinrichtung – lokale Vorschau</strong>
-      <p>Sie bearbeiten derzeit einen Entwurf, der nur in diesem Browser gespeichert wird. Eine zentrale, geschützte Administration steht nach Installation des Sibyl-Core-Releases zur Verfügung. Geben Sie hier keine Zugangsdaten ein.</p>
+      <strong>Geschützte Administration</strong>
+      <p>Einstellungen und Benutzer werden in der Datenbank Ihrer eigenen Sibyl-Installation gespeichert. Der erste Administrator heißt <code>admin</code>; das Bootstrap-Passwort muss nach der ersten Anmeldung geändert werden.</p>
+    </div>
+    <section id="admin-login-box" class="panel" aria-labelledby="login-title">
+      <h2 id="login-title">Als Administrator anmelden</h2>
+      <form id="login-form">
+        <div class="field-row">
+          <div class="field"><label for="login-name">Benutzername</label><input id="login-name" type="text" autocomplete="username" required value="admin"></div>
+          <div class="field"><label for="login-password">Passwort</label><input id="login-password" type="password" autocomplete="current-password" required></div>
+        </div>
+        <button class="button" type="submit">Anmelden</button>
+        <p id="login-status" role="status" aria-live="polite" class="small" style="margin-top:12px"></p>
+      </form>
+    </section>
+    <section id="password-change-box" class="panel" hidden aria-labelledby="pw-title">
+      <h2 id="pw-title">Startpasswort ändern</h2>
+      <p>Vor der ersten Konfiguration müssen Sie das vorgegebene Passwort durch ein eigenes Passwort mit mindestens zwölf Zeichen ersetzen.</p>
+      <form id="password-change-form">
+        <div class="field"><label for="old-password">Bisheriges Passwort</label><input type="password" id="old-password" autocomplete="current-password" required></div>
+        <div class="field-row">
+          <div class="field"><label for="new-password">Neues Passwort</label><input type="password" id="new-password" autocomplete="new-password" minlength="12" required></div>
+          <div class="field"><label for="confirm-password">Passwort bestätigen</label><input type="password" id="confirm-password" autocomplete="new-password" minlength="12" required></div>
+        </div>
+        <button class="button" type="submit">Passwort speichern</button>
+        <p id="password-change-status" role="status" aria-live="polite" class="small" style="margin-top:12px"></p>
+      </form>
+    </section>
+    <div id="admin-area" hidden>
+    <div class="actions" style="margin-bottom:16px">
+      <span id="signed-in-as" class="small muted"></span>
+      <button type="button" id="logout-button" class="button secondary">Abmelden</button>
     </div>
     <div class="columns">
       <nav class="tab-nav" aria-label="Administrationsbereiche">
@@ -47,9 +76,9 @@
             <div class="details-list">
               <div>Plattform</div><div>Sibyl System</div>
               <div>Bereitstellung</div><div>Selbst gehostete Installation</div>
-              <div>Konfiguration</div><div>Browserlokaler Entwurf</div>
+              <div>Konfiguration</div><div>Zentrale PostgreSQL-Datenbank</div>
               <div>Addon-Quelle</div><div>GitHub Releases / Pre-Releases</div>
-              <div>Anmeldung</div><div>Noch nicht eingerichtet</div>
+              <div>Anmeldung</div><div>Administratorverwaltung aktiv</div>
             </div>
             <div class="actions">
               <button class="button" type="button" data-go="organization">Organisation anpassen</button>
@@ -58,16 +87,16 @@
           </div>
           <div class="panel">
             <h3>Nächste Schritte</h3>
-            <p class="muted">Konfigurieren Sie vorab das Erscheinungsbild. Nach Bereitstellung des Core-Backends können Benutzer, Rollen, externe Verzeichnisse und Addons mit gesicherten Administrationsrechten eingerichtet werden.</p>
+            <p class="muted">Konfigurieren Sie vorab das Erscheinungsbild. Verwalten Sie das Erscheinungsbild Ihrer Organisation. Addon-spezifische Einstellungen und erweiterte Benutzerrollen werden schrittweise ergänzt.</p>
           </div>
         </section>
         <section class="tab-panel" id="panel-organization" aria-labelledby="organization-title" hidden>
           <div class="panel">
-            <div class="panel-head"><h2 id="organization-title">Organisation &amp; Design</h2><p>Diese Einstellungen werden als Vorschau nur in Ihrem Browser gespeichert.</p></div>
+            <div class="panel-head"><h2 id="organization-title">Organisation &amp; Design</h2><p>Diese Einstellungen werden zentral im Sibyl Core gespeichert.</p></div>
             <form id="organization-form">
               <div class="field"><label for="organization-name">Name Ihrer Organisation</label>
                 <input type="text" id="organization-name" name="organization" maxlength="80" placeholder="z. B. Musterfirma" autocomplete="organization">
-                <span class="hint">Wird in der Kopfzeile Ihrer persönlichen Vorschau angezeigt.</span></div>
+                <span class="hint">Wird zentral in der Sibyl-Installation gespeichert.</span></div>
               <div class="field-row">
                 <div class="field"><label for="organization-language">Oberflächensprache</label>
                   <select id="organization-language" name="language"><option value="de">Deutsch</option><option value="en">English (geplant)</option></select>
@@ -86,10 +115,10 @@
                   <option value="teal">Petrol</option>
                   <option value="violet">Violett</option>
                 </select>
-                <span class="hint">Farbauswahl als gespeicherter Entwurf; vollständig globale Theme-Installation folgt mit dem Core.</span>
+                <span class="hint">Farbauswahl wird serverseitig gespeichert; künftige Theme-Addons können die Darstellung erweitern.</span>
               </div>
               <div class="actions">
-                <button type="submit" class="button">Vorschau speichern</button>
+                <button type="submit" class="button">Einstellungen speichern</button>
                 <button type="button" class="button secondary" id="export-config">Entwurf exportieren</button>
                 <label for="import-file" class="button secondary" style="cursor:pointer">Entwurf importieren</label>
                 <input type="file" id="import-file" accept=".json,application/json" hidden>
@@ -102,7 +131,7 @@
         <section class="tab-panel" id="panel-modules" aria-labelledby="modules-title" hidden>
           <div class="panel">
             <div class="panel-head"><h2 id="modules-title">Addon-Verwaltung</h2><p>Erweiterungen aus eigenen Repositories ergänzen, Versionen prüfen und verwalten.</p></div>
-            <p>Der integrierte Addon-Browser enthält bereits die bekannten Modul-Repositories. Alle bisherigen Repositories haben noch keine installierbaren Releases.</p>
+            <p>Der integrierte Addon-Browser enthält bereits die bekannten Modul-Repositories. Der Addon-Browser fragt veröffentlichte GitHub-Releases serverseitig ab.</p>
             <div class="actions"><a href="/addons.html" class="button">Zum Addon-Browser</a></div>
             <div class="divider"></div>
             <p class="small muted">Paketinstallation, Dependencies, Aktivierung und Update-Rollback benötigen den authentifizierten Sibyl Core mit eigener Datenbank und Release-API.</p>
@@ -126,15 +155,16 @@
             <div class="panel-head"><h2 id="security-title">Benutzer &amp; Sicherheit</h2><p>Rollen, Richtlinien und Administratorzugänge verwalten.</p></div>
             <div class="details-list">
               <div>Identitätsquelle</div><div>Sibyl Core (eigene Datenbank) – noch nicht bereitgestellt</div>
-              <div>Rollen / Berechtigungen</div><div>Core-API mit serverseitiger Prüfung geplant</div>
-              <div>Login / MFA</div><div>Erst nach HTTPS und geschütztem Backend</div>
-              <div>Änderungsprotokolle</div><div>Core Audit Log geplant</div>
+              <div>Rollen / Berechtigungen</div><div>Admin-Rechte werden serverseitig geprüft</div>
+              <div>Login / MFA</div><div>HTTPS und Datenbank-Authentifizierung aktiv</div>
+              <div>Änderungsprotokolle</div><div>Core Audit-Log Tabelle angelegt</div>
             </div>
             <div class="divider"></div>
-            <div class="notice warning"><strong>Keine Administrationsanmeldung über HTTP</strong><p>Für eine sichere Anmeldung wird HTTPS benötigt. Die Vorschau enthält weder Login-Felder noch administrative Schreibzugriffe auf den Server.</p></div>
+            <div class="notice warning"><strong>Nur über HTTPS anmelden</strong><p>Die Zugangsdaten werden an den Sibyl-Core übermittelt, nicht an GitHub. Für produktive Installationen ist ein vertrauenswürdiges Zertifikat erforderlich.</p></div>
           </div>
         </section>
       </div>
+    </div>
     </div>
   </main>
   <footer><span>Sibyl System</span><span>Ihre Plattform. Ihre Konfiguration.</span></footer>
