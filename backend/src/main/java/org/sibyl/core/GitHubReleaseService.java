@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,6 +31,11 @@ public class GitHubReleaseService {
             .connectTimeout(Duration.ofSeconds(8))
             .followRedirects(HttpClient.Redirect.NEVER).build();
     private final Path root = Path.of(System.getenv().getOrDefault("SIBYL_ADDON_DATA", "/var/lib/sibyl/addons"));
+    // 5-minute cache protects GitHub's public, unauthenticated API quota.
+    // The actual download re-checks GitHub independently to avoid stale releases.
+    private static final long CACHE_NS = Duration.ofMinutes(5).toNanos();
+    private record CachedRelease(ReleaseInfo release, long expiresAtNs) { }
+    private final ConcurrentHashMap<String, CachedRelease> releaseCache = new ConcurrentHashMap<>();
 
     public record ReleaseInfo(String tag, boolean prerelease, String body, JsonNode asset, String digest) { }
 
@@ -57,6 +63,18 @@ public class GitHubReleaseService {
     }
 
     public ReleaseInfo latest(AddonCatalog.Addon addon, String channel) throws Exception {
+        if (!"stable".equals(channel) && !"prerelease".equals(channel))
+            throw new IllegalArgumentException("Unknown channel");
+        String key = addon.repo() + "#" + channel;
+        CachedRelease cached = releaseCache.get(key);
+        if (cached != null && System.nanoTime() - cached.expiresAtNs() < 0)
+            return cached.release();
+        ReleaseInfo fresh = latestFresh(addon, channel);
+        releaseCache.put(key, new CachedRelease(fresh, System.nanoTime() + CACHE_NS));
+        return fresh;
+    }
+
+    private ReleaseInfo latestFresh(AddonCatalog.Addon addon, String channel) throws Exception {
         if (!channel.equals("stable") && !channel.equals("prerelease")) throw new IllegalArgumentException("Unknown channel");
         String suffix = channel.equals("stable") ? "/releases/latest" : "/releases?per_page=100";
         URI uri = URI.create(API + addon.repo() + suffix);
@@ -111,7 +129,7 @@ public class GitHubReleaseService {
     }
 
     public synchronized String download(AddonCatalog.Addon addon, String channel, String expectedTag) throws Exception {
-        ReleaseInfo release = latest(addon, channel); // Re-check current GitHub release; NEVER a branch.
+        ReleaseInfo release = latestFresh(addon, channel); // Fresh server-side GitHub request before download; NEVER a branch.
         if (release == null || !release.tag().equals(expectedTag)) throw new IllegalStateException("Release changed or unavailable");
         if (release.asset() == null || !release.digest().matches("sha256:[a-fA-F0-9]{64}"))
             throw new IllegalStateException("Verified ZIP release asset with SHA-256 digest required");
