@@ -1,4 +1,4 @@
-name: Sibyl Core PostgreSQL integration tests
+name: Sibyl Core MySQL integration tests
 
 on:
   push:
@@ -13,21 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
-      postgres:
-        image: postgres:16
+      mysql:
+        image: mysql:8.0
         env:
-          POSTGRES_USER: sibyl
-          POSTGRES_PASSWORD: ci-only-do-not-use
-          POSTGRES_DB: sibyl
+          MYSQL_ROOT_PASSWORD: ci-root-only
+          MYSQL_USER: sibyl
+          MYSQL_PASSWORD: ci-only-do-not-use
+          MYSQL_DATABASE: sibyl
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd "pg_isready -U sibyl -d sibyl"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 15
     env:
-      SIBYL_DB_URL: jdbc:postgresql://127.0.0.1:5432/sibyl
+      SIBYL_DB_URL: jdbc:mysql://127.0.0.1:3306/sibyl?sslMode=REQUIRED&connectionTimeZone=UTC
       SIBYL_DB_USER: sibyl
       SIBYL_DB_PASSWORD: ci-only-do-not-use
     steps:
