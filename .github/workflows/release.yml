@@ -1,6 +1,8 @@
 name: Build & Publish Sibyl Core Release
 
 on:
+  push:
+    branches: [test]
   workflow_dispatch:
     inputs:
       version:
@@ -24,8 +26,8 @@ jobs:
     steps:
       - name: Validate branch, version and channel
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
-          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.1' || inputs.version }}
+          RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
           RELEASE_REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -52,7 +54,7 @@ jobs:
           mvn --batch-mode --no-transfer-progress clean verify
       - name: Create release archive
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.1' || inputs.version }}
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -63,7 +65,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
-          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
         run: |
           set -euo pipefail
           tag="v$RELEASE_VERSION"
