@@ -1,60 +1,58 @@
 # Sibyl System
 
-Firmenneutrale modulare Webplattform. Dieses Repository ist **die Standardinstallation / Core**. Addons haben eigene Repositories und veröffentlichen unabhängig versionierte GitHub-Releases.
+Firmenneutrale, selbst gehostete und modulare Webplattform mit eigenem **PostgreSQL-Core**, Administrationsoberfläche und einem ausschließlich über **GitHub-Releases** versorgten Addon-Browser.
 
-> **Entwicklungsstand (09.10.2026):** Architekturprototyp, nicht produktiv freigegeben. Der Branch `test` enthält eine erste Core-API und die im Legacy-Design gestaltete Addon-Browser-Oberfläche. Backend-Build, Authentifizierung, Addon-Aktivierung, DB-Migrationen und End-to-End-Tests sind noch zu vervollständigen. Der Core wurde noch **nicht** aus einem veröffentlichten Release auf eine VM deployt.
+**Status (09.10.2026):** Entwicklungsstand, `test`-Branch. Core `v0.1.0-rc.1` ist auf der internen Labor-VM lauffähig; die **neue datenbankgestützte Version `v0.1.0-rc.2`** ist noch separat zu veröffentlichen und auf Cluster 3 zu deployen. Keine Produktions-/DMZ-Freigabe.
 
-## Installation / Release-Policy
+## Standardinstallation mit PostgreSQL
 
-- Nur Assets eines **veröffentlichten GitHub-Releases** installieren, niemals den Inhalt von `main` oder `test` direkt.
-- `main`: stabile Releases `v1.0.0`, `test`: Pre-Releases `v0.1.0-rc.1`.
-- Manuelle GitHub-Actions-Ausführung `Build & Publish Sibyl Core Release` erstellt nur nach erfolgreichem Maven-/Frontend-Test das Paket und den Release. Ein GitHub Actions Run ist nötig; das Vorhandensein der YAML-Datei bedeutet nicht, dass bereits ein Release existiert.
-- Im Lab fehlt bislang ein Release; deshalb steht dort noch keine laufende neue WebApp.
+Die Standardinstallation für eine frische **Ubuntu-24.04-VM** besteht aus einem einzigen Release-Installer:
 
-## Ausbilderfunktionen / Ziele
+```text
+GitHub Release v0.1.0-rc.2
+├── sibyl-core-0.1.0-rc.2.jar
+├── install-sibyl-ubuntu-2404.sh
+├── STANDARD-INSTALLATION.md
+├── RELEASE-POLICY.md
+└── SHA256SUMS.txt
+```
 
-Suche lokal -> optional Web; vollautomatische Inventarisierung; Network Mapping/IPAM; IHK-ähnliches Berichtsheft; Kurssystem; optionaler AD-Provider. Das alles baut auf einer eigenen zentralen **Sibyl-Datenbank und Core API** auf. Sibyl funktioniert auch ohne AD. Die finale WebApp benötigt einen tatsächlich getrennten **DMZ-Server**. Auf dem derzeit unsegmentierten Cluster-3-LAN ist nur ein Entwicklungs-Deployment zulässig, kein DMZ-Abnahmenachweis.
+Nach Prüfung der Release-Assets das Script `sudo bash install-sibyl-ubuntu-2404.sh` ausführen. Es installiert **PostgreSQL und Java 21**, erstellt die Datenbank `sibyl` samt zufällig generiertem Datenbankkennwort, lädt den Core aus dem **öffentlichen GitHub-Release** mit SHA-256-Validierung und startet ihn als eingeschränkten Systemdienst.
 
-## Addon-Browser
+**Erstanmeldung:** Benutzer `admin`, Passwort `friend`. Das bekannte Standardpasswort wird nur beim ersten Start einer leeren Datenbank als BCrypt-Hash gespeichert. **Vor jedem administrativen Eingriff muss es geändert werden** (neues Passwort mindestens 12 Zeichen). Bei regulären Neustarts und Updates bleiben Konten und Einstellungen unverändert. Den Erststart ausschließlich im geschützten Netz und mit einem vertrauenswürdigen HTTPS-Reverse-Proxy freigeben.
 
-Die neutrale Standard-Startseite liegt in `frontend/index.html`. Sie ist bewusst firmenunabhängig (kein Nikolauspflege-/Cluster-/IP-/Testbranding). Der **Addon-Browser** liegt als eigener Bereich unter `frontend/addons.html`, zusammen mit `frontend/addon-browser.js` und der serverseitigen Core-API. Sein Backend:
-- listet nur geprüfte GitHub-Repositories in `catalog/default.json`;
-- liest den neuesten stabilen Release oder neuesten passenden veröffentlichten Pre-Release;
-- fällt **niemals auf einen Git-Branch** zurück;
-- fordert für private Repositories einen nur serverseitig gespeicherten `SIBYL_GITHUB_TOKEN` an;
-- validiert Release-Tag, ZIP-Dateigröße, offizielle SHA-256-Digest-Angabe, ZIP-Einträge und `module.json`;
-- speichert das verifizierte Release als **downloaded_not_activated**; fremden Backendcode automatisch auszuführen ist bewusst nicht implementiert.
+Der Installer bindet den Core absichtlich nur auf `127.0.0.1:8080`; er erzeugt keine öffentliche HTTP-Anmeldung. Die detaillierte Anleitung, Datenbankstruktur und Wartungshinweise stehen unter [docs/STANDARD-INSTALLATION.md](docs/STANDARD-INSTALLATION.md).
 
-Aktuell deklarierte Repos: `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning`, `Sibyl.doc`. Weitere benötigte Repositories für `Sibyl.search`, `Sibyl.network`, `Sibyl.training-log` und `Sibyl.courses` müssen noch angelegt werden.
+## Administration
 
-## Visuelles Design
+- `/admin.html`: Anmelden mit Datenbankkonto, verpflichtender Passwortwechsel bei Erstnutzung.
+- Organisation: Name, Sprache, Zeitzone, Design-Akzent zentral in PostgreSQL.
+- Addons: pro Addon eine versionierungsunabhängige, nicht geheime JSON-Konfiguration in `sibyl_addon_settings`. Zugangsdaten werden nicht in diesem Feld gespeichert.
+- GitHub Addon-Browser: serverseitige Prüfung veröffentlichter Releases und Pre-Releases, geschützter Download mit Digest/Manifest-Prüfung. **Download ist noch keine Aktivierung**.
+- Sicherheit: BCrypt-Passwort-Hashing, Admin-Berechtigung, CSRF-Prüfung, erstes Passwort zwingend ändern und Audit-Log.
+- Nicht fertig: Mehrbenutzer-RBAC, verschlüsselter Secret-Store, echtes Plugin-Laden/Aktivieren, automatische Formulare für Addon-Schemata.
 
-Das historische CSS ist unverändert unter `design/legacy-reference.css` aufbewahrt. Die neue Standard-Startseite nutzt das Originalfarbschema, Light-/Darkmode, Topbar, Segoe UI und eckige Bedienelemente; die Addon-Seite nutzt `frontend/styles.css`. Eine rein statische Live-Willkommensseite für das Labor steht auf dem Edge-Server, bis die Core-Runtime aus einem Release installiert ist. Eine vollständige optische 1:1-Abnahme aller früheren Seiten steht noch aus.
+Die Datenbankmigrationsdateien liegen in `backend/src/main/resources/db/migration/` (Flyway). Die Datenbank besitzt Benutzer, Organisation, Addon-Settings und Audit-Ereignisse.
 
-## Basis-Entwicklung
+## Architektur und Addons
 
-- Java 21, Spring Boot 3.5.x (Backend), Webfrontend für frühen Browser-Prototyp.
-- Für lokale Versuche muss `SIBYL_BOOTSTRAP_ADMIN_USERNAME` und `SIBYL_BOOTSTRAP_ADMIN_BCRYPT` (gesicherter BCrypt-Hash) gesetzt sein. Ohne beide verweigert die API bewusst den Start.
-- **Öffentliche GitHub-Releases sind ohne Token erreichbar.** Der Sibyl-Server fragt die GitHub-Releases-API selbst ab und lädt veröffentlichte Asset-ZIPs direkt von GitHub herunter. Ein `SIBYL_GITHUB_TOKEN` wird nur für ausdrücklich erlaubte **private** Repository-Quellen benötigt und bleibt ausschließlich im Backend.
-- `SIBYL_ADDON_DATA` konfiguriert einen geschützten lokalen Addon-Staging-Pfad.
-- Core API: `GET /api/v1/admin/addons/catalog?channel=stable|prerelease`, `GET /api/v1/admin/csrf`, `POST /api/v1/admin/addons/{id}/download`.
-- Siehe `docs/RELEASE-POLICY.md`.
+Sibyl Core (Java 21/Spring Boot 3.5.x), PostgreSQL, unabhängige optionale Addons und firmeneigene Theme-/Konfigurationswerte. Ein Active Directory ist **nicht erforderlich**: AD wird über `Sibyl.ad` als optionaler Verzeichnisprovider angebunden.
 
-## Cluster-3-Labor
+Bekannte Repositories: `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning`, `Sibyl.doc`. Weitere optionale Addons sind geplant (Suche, Network/IPAM, Berichtsheft, Kurse). Alle Addons besitzen eigene IDs und Versionen, eine Sibyl-Installation führt pro Modul-ID höchstens eine Version.
 
-Vorbereitet auf dem Proxmox-Spielwiesencluster `ThrusterCluster`: Ubuntu-Vorlage 9500, erste VM 200 `sibyl-edge-lab`. Weitere VMs und Release-Deployment sind noch offen. Dokumentation auf Verwaltungsserver .118 in `/home/fiona/Documentation-Sibyl/`.
+Der **Sibyl-Server** fragt die öffentliche GitHub Releases API ohne Token ab und lädt veröffentlichte ZIP-Assets direkt von GitHub. Keine ZIP-Downloads aus `main`, `test` oder Entwicklerverzeichnissen. Für private Addon-Repositories wäre ein separat konfigurierter, serverseitiger GitHub-Zugang erforderlich. Siehe [docs/ADDON-GITHUB-RELEASE-FLOW.md](docs/ADDON-GITHUB-RELEASE-FLOW.md) und [docs/RELEASE-POLICY.md](docs/RELEASE-POLICY.md).
 
-**Produktion (Cluster 1) und Test (Cluster 2) werden nicht verändert.**
+Das Grunddesign bleibt an `design/legacy-reference.css` angelehnt. Die Marke ist unabhängig vom Betreiber, die Oberfläche wird mit Organisationseinstellungen angepasst. Eine vollständige optische 1:1-Parität mit dem früheren System steht noch aus.
 
+## Entwicklung und Tests
 
-## Neutrale Admin- und Addon-Browser-Oberfläche (aktuelle Cluster-3-Vorschau)
+```bash
+cd backend
+mvn clean verify
+```
 
-Die komplette intern geprüfte, statische UI-Vorschau liegt unter `frontend/preview/` (Startseite, Admin, Addon-Browser, gemeinsame Styles/JS und verifizierter, datierter Katalog). Interne Preview-Routen: `/`, `/admin.html`, `/addons.html`. Alle Dateien wurden von 172.22.100.118 mit HTTP 200 geprüft.
+Die Tests benötigen eine PostgreSQL-Datenbank, z. B. den Postgres-16-Dienst des GitHub-CI-Workflows `.github/workflows/db-ci.yml`. Dort werden unter anderem Flyway-Migration, `admin`/`friend`-Bootstrap, Passwortwechselpflicht, Einstellungen und Sicherheitsendpunkte geprüft.
 
-Die reguläre Core-Standardinstallation enthält jetzt `frontend/index.html` mit den drei Navigationszielen, `frontend/admin.html` mit einer **browserlokalen Konfigurationsvorschau** und weiterhin `frontend/addons.html` mit der späteren serverseitigen Core-Addon-API. Der Preview-Addon-Browser in `frontend/preview/` listet die vier bekannten Repositories, aber deaktiviert Download/Installation bis echte Releases plus geschütztes Backend vorhanden sind.
+**Lab-Deployment:** ausschließlich Proxmox Cluster 3 mit Edge `172.22.120.240`, App `172.22.120.241`, Datenbank-VM `172.22.120.242`. Die derzeitige App `.241` läuft noch mit dem früheren Core-Release `v0.1.0-rc.1`, und auf der separaten Datenbank-VM wurde PostgreSQL noch nicht ausgerollt. Die neue Standardinstallation ist für **einen Host**; die bestehende Drei-VM-Laborumgebung benötigt eine gesonderte, kontrollierte Migration und Rückfallstrategie.
 
-**Sicherheitsgrenze:** Diese Vorschau darf nicht als gesicherte oder produktive Administration dargestellt werden. Änderungen werden nur im Browser-localStorage gespeichert, nicht in der Sibyl-Datenbank. Keine Kennwörter/API-Tokens über den HTTP-Preview-Endpunkt eingeben. TLS, Admin-Authentifizierung und RBAC vor Freigabe echter Schreib-/Installationsfunktionen implementieren.
-
-## GitHub-Only-Addon-Distribution
-
-Die öffentliche Verteilung soll ohne GitHub-Benutzerkonto für jede Sibyl-Installation funktionieren. Voraussetzung sind **öffentlich zugängliche GitHub-Releases** in den geprüften Addon-Repositories. Das Backend ruft `/repos/OWNER/REPO/releases/latest` (stable) oder `/releases` (prerelease) ab, lädt den versionierten ZIP-Anhang von GitHub, überprüft dessen SHA-256-Digest/Manifest und speichert ihn geschützt im lokalen Staging. Der Installations-/Aktivierungsschritt bleibt eine separate Admin-Aktion und ist noch nicht als laufender Core-Dienst deployed. Für private Repositories ist eine serverseitige Berechtigung erforderlich. Details: [docs/ADDON-GITHUB-RELEASE-FLOW.md](docs/ADDON-GITHUB-RELEASE-FLOW.md).
+**Produktion (Cluster 1) und bestehendes Testcluster (Cluster 2) bleiben unangetastet.**
