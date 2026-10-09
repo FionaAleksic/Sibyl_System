@@ -26,7 +26,7 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
             jdbc.update("""
                 INSERT INTO sibyl_users (username, password_hash, role, must_change_password)
                 VALUES ('admin', ?, 'ADMIN', TRUE)
-                ON CONFLICT (username) DO NOTHING
+                ON DUPLICATE KEY UPDATE username=username
                 """, encoder.encode("friend"));
             jdbc.update("INSERT INTO sibyl_audit_events (actor, action) VALUES ('system', 'bootstrap-admin-created')");
         }
