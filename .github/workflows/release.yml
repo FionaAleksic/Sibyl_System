@@ -1,8 +1,6 @@
 name: Build & Publish Sibyl Core Release
 
 on:
-  push:
-    branches: [test]
   workflow_dispatch:
     inputs:
       version:
