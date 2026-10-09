@@ -35,7 +35,7 @@ Das historische CSS ist unverändert unter `design/legacy-reference.css` aufbewa
 
 - Java 21, Spring Boot 3.5.x (Backend), Webfrontend für frühen Browser-Prototyp.
 - Für lokale Versuche muss `SIBYL_BOOTSTRAP_ADMIN_USERNAME` und `SIBYL_BOOTSTRAP_ADMIN_BCRYPT` (gesicherter BCrypt-Hash) gesetzt sein. Ohne beide verweigert die API bewusst den Start.
-- `SIBYL_GITHUB_TOKEN` ist ausschließlich im Backend zur Abfrage privater Releases erlaubt.
+- **Öffentliche GitHub-Releases sind ohne Token erreichbar.** Der Sibyl-Server fragt die GitHub-Releases-API selbst ab und lädt veröffentlichte Asset-ZIPs direkt von GitHub herunter. Ein `SIBYL_GITHUB_TOKEN` wird nur für ausdrücklich erlaubte **private** Repository-Quellen benötigt und bleibt ausschließlich im Backend.
 - `SIBYL_ADDON_DATA` konfiguriert einen geschützten lokalen Addon-Staging-Pfad.
 - Core API: `GET /api/v1/admin/addons/catalog?channel=stable|prerelease`, `GET /api/v1/admin/csrf`, `POST /api/v1/admin/addons/{id}/download`.
 - Siehe `docs/RELEASE-POLICY.md`.
@@ -54,3 +54,7 @@ Die komplette intern geprüfte, statische UI-Vorschau liegt unter `frontend/prev
 Die reguläre Core-Standardinstallation enthält jetzt `frontend/index.html` mit den drei Navigationszielen, `frontend/admin.html` mit einer **browserlokalen Konfigurationsvorschau** und weiterhin `frontend/addons.html` mit der späteren serverseitigen Core-Addon-API. Der Preview-Addon-Browser in `frontend/preview/` listet die vier bekannten Repositories, aber deaktiviert Download/Installation bis echte Releases plus geschütztes Backend vorhanden sind.
 
 **Sicherheitsgrenze:** Diese Vorschau darf nicht als gesicherte oder produktive Administration dargestellt werden. Änderungen werden nur im Browser-localStorage gespeichert, nicht in der Sibyl-Datenbank. Keine Kennwörter/API-Tokens über den HTTP-Preview-Endpunkt eingeben. TLS, Admin-Authentifizierung und RBAC vor Freigabe echter Schreib-/Installationsfunktionen implementieren.
+
+## GitHub-Only-Addon-Distribution
+
+Die öffentliche Verteilung soll ohne GitHub-Benutzerkonto für jede Sibyl-Installation funktionieren. Voraussetzung sind **öffentlich zugängliche GitHub-Releases** in den geprüften Addon-Repositories. Das Backend ruft `/repos/OWNER/REPO/releases/latest` (stable) oder `/releases` (prerelease) ab, lädt den versionierten ZIP-Anhang von GitHub, überprüft dessen SHA-256-Digest/Manifest und speichert ihn geschützt im lokalen Staging. Der Installations-/Aktivierungsschritt bleibt eine separate Admin-Aktion und ist noch nicht als laufender Core-Dienst deployed. Für private Repositories ist eine serverseitige Berechtigung erforderlich. Details: [docs/ADDON-GITHUB-RELEASE-FLOW.md](docs/ADDON-GITHUB-RELEASE-FLOW.md).
