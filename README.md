@@ -8,7 +8,7 @@ Firmenneutrale, selbst gehostete modulare Plattform mit eigener **MySQL-8-Datenb
 
 **Erstanmeldung** (nur bei vollständig leerer Installation): `admin` / `friend`. Das Passwort wird nur als BCrypt-Hash gespeichert. Vor dem Zugriff auf Admin-Einstellungen muss es verpflichtend geändert werden (mindestens 12 Zeichen). Weil das Standardpasswort allgemein bekannt ist, muss das System bis zur Änderung in einem beschränkten internen Netz bleiben und über vertrauenswürdiges HTTPS erreichbar sein.
 
-Ein Installer wird mit dem GitHub-Core-Pre-Release **`v0.1.0-rc.3`** ausgeliefert. Die Dateien werden nur aus veröffentlichten GitHub-Releases bezogen und ihre SHA-256-Digests geprüft. Eine vollständige Anleitung inklusive des MySQL-Schemas gibt es unter [docs/STANDARD-INSTALLATION.md](docs/STANDARD-INSTALLATION.md).
+Ein Installer wird mit dem GitHub-Core-Pre-Release **`v0.1.0-rc.4`** ausgeliefert. Die Dateien werden nur aus veröffentlichten GitHub-Releases bezogen und ihre SHA-256-Digests geprüft. Eine vollständige Anleitung inklusive des MySQL-Schemas gibt es unter [docs/STANDARD-INSTALLATION.md](docs/STANDARD-INSTALLATION.md).
 
 ## Administrationsbereiche
 
@@ -30,9 +30,19 @@ Mehrbenutzerverwaltung mit differenziertem RBAC, Secret-Store, Addon-Loader/Akti
 
 Die anfänglichen Addon-Repositories heißen `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning` und `Sibyl.doc`. Nur `Sibyl.ad v0.1.0-rc.1` ist derzeit als installierbares Addon-Pre-Release veröffentlicht. Weitere Erweiterungen werden nach und nach veröffentlicht.
 
+## Unbeaufsichtigter Installer
+
+Der veröffentlichte GitHub-Pre-Release [v0.1.0-rc.4](https://github.com/FionaAleksic/Sibyl_System/releases/tag/v0.1.0-rc.4) enthält einen **automatischen Einzelserver-Installer** und das **Cluster-3-Installer-Bundle** `sibyl-cluster3-installer-0.1.0-rc.4.tar.gz`. Beide sind auf einen einzelnen, freigegebenen Start ausgelegt und stellen während der Installation keine Passwortfragen.
+
+Für einen einzelnen Ubuntu-24.04-Server werden MySQL-8-Datenbank, eingeschränkte SQL-Zugangsdaten, der Core aus GitHub, systemd und die Flyway-Migrationen automatisch eingerichtet. Im Clusterbetrieb werden die MySQL-Zugangsdaten einmal maschinell erzeugt, über einen **vorher autorisierten** SSH-Kanal provisioniert und anschließend der Core mit automatischem Rollback umgeschaltet. Auf Ablehnung durch die Remote-Sicherheitsrichtlinie bricht der Controller ausdrücklich ab; er besitzt keinen alternativen unsicheren Transferweg.
+
+Das einmalige Passwort `admin` / `friend` ist nur für die Erstanmeldung zulässig und muss sofort geändert werden. Ein produktiver Einsatz benötigt ein vertrauenswürdiges HTTPS-Zertifikat, Backup-/Restore-Prüfungen und einen genehmigten Secrets-Provisionierungsweg.
+
+**Stand der Firmen-VMs:** Die neue Cluster-Variante wurde im Release gebaut und ihr Shellcode geprüft, aber **nicht** auf .241 ausgeführt, da die Remote-Sicherheitsprüfung den Secret-Transport blockiert. Der funktionierende alte Core bleibt bis zu einem autorisierten Deployment unverändert aktiv.
+
 ## GitHub-Releases und Testbranch
 
-Der `test`-Branch enthält die aktive Entwicklung, `main` ist der stabile Branch. **Installieren ausschließlich aus veröffentlichten GitHub-Releases**, niemals aus einem Branch-ZIP oder dem ungeprüften Stand eines Branches. Releases sind unveränderlich; für den Wechsel von PostgreSQL auf MySQL ist eine **neue** Core-Version `v0.1.0-rc.3` vorgesehen, statt den alten Release `v0.1.0-rc.2` zu überschreiben.
+Der `test`-Branch enthält die aktive Entwicklung, `main` ist der stabile Branch. **Installieren ausschließlich aus veröffentlichten GitHub-Releases**, niemals aus einem Branch-ZIP oder dem ungeprüften Stand eines Branches. Releases sind unveränderlich; für den Wechsel von PostgreSQL auf MySQL ist eine **neue** Core-Version `v0.1.0-rc.4` vorgesehen, statt den alten Release `v0.1.0-rc.2` zu überschreiben.
 
 Die CI unter `.github/workflows/db-ci.yml` testet MySQL 8 mit frischem Schema, Passwort-Hash, Startpasswortwechsel, Adminrechten und zentraler Konfigurationsspeicherung.
 
