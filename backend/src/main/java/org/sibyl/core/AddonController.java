@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/v1/admin")
+@RequestMapping("/api/v1")
 public final class AddonController {
     private final AddonCatalog catalog;
     private final GitHubReleaseService releases;
@@ -26,7 +26,7 @@ public final class AddonController {
         this.releases = releases;
     }
 
-    @GetMapping("/csrf")
+    @GetMapping("/admin/csrf")
     public Map<String, String> csrf(CsrfToken token) {
         return Map.of("header", token.getHeaderName(), "token", token.getToken());
     }
@@ -68,7 +68,7 @@ public final class AddonController {
 
     public record DownloadRequest(String channel, String releaseTag) {}
 
-    @PostMapping("/addons/{id}/download")
+    @PostMapping("/admin/addons/{id}/download")
     public Map<String, String> download(@PathVariable String id, @RequestBody DownloadRequest request) {
         if (request == null || request.channel() == null ||
             (!request.channel().equals("stable") && !request.channel().equals("prerelease")) ||
