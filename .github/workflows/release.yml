@@ -64,10 +64,12 @@ jobs:
       - name: Publish immutable release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.1' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
         run: |
           set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] || { echo "Invalid SemVer: refusing tag creation"; exit 1; }
+          [[ "$RELEASE_VERSION" != "0.1.0-SNAPSHOT" ]] || exit 1
           tag="v$RELEASE_VERSION"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Tag already released; refuse overwrite"
