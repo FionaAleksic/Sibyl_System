@@ -17,7 +17,7 @@ Suche lokal -> optional Web; vollautomatische Inventarisierung; Network Mapping/
 
 ## Addon-Browser
 
-Das Standardfrontend unter `frontend/` hat einen integrierten **Addon-Browser**. Sein serverseitiges Backend:
+Die neutrale Standard-Startseite liegt in `frontend/index.html`. Sie ist bewusst firmenunabhängig (kein Nikolauspflege-/Cluster-/IP-/Testbranding). Der **Addon-Browser** liegt als eigener Bereich unter `frontend/addons.html`, zusammen mit `frontend/addon-browser.js` und der serverseitigen Core-API. Sein Backend:
 - listet nur geprüfte GitHub-Repositories in `catalog/default.json`;
 - liest den neuesten stabilen Release oder neuesten passenden veröffentlichten Pre-Release;
 - fällt **niemals auf einen Git-Branch** zurück;
@@ -29,7 +29,7 @@ Aktuell deklarierte Repos: `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning`, `Sib
 
 ## Visuelles Design
 
-Das historische CSS ist unverändert unter `design/legacy-reference.css` aufbewahrt. Das neue `frontend/styles.css` verwendet das Originalfarbschema, Darkmode, Topbar, Segoe UI und eckige Bedienelemente. Eine vollständige optische 1:1-Abnahme aller früheren Seiten steht noch aus.
+Das historische CSS ist unverändert unter `design/legacy-reference.css` aufbewahrt. Die neue Standard-Startseite nutzt das Originalfarbschema, Light-/Darkmode, Topbar, Segoe UI und eckige Bedienelemente; die Addon-Seite nutzt `frontend/styles.css`. Eine rein statische Live-Willkommensseite für das Labor steht auf dem Edge-Server, bis die Core-Runtime aus einem Release installiert ist. Eine vollständige optische 1:1-Abnahme aller früheren Seiten steht noch aus.
 
 ## Basis-Entwicklung
 
