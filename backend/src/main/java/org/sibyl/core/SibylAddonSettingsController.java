@@ -19,7 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping("/api/v1/admin/addon-settings")
-public final class SibylAddonSettingsController {
+public class SibylAddonSettingsController {
     private final JdbcTemplate jdbc;
     private final AddonCatalog catalog;
     private final ObjectMapper mapper;
