@@ -1,6 +1,16 @@
 spring:
   application:
     name: sibyl-core
+  datasource:
+    url: ${SIBYL_DB_URL:jdbc:postgresql://127.0.0.1:5432/sibyl}
+    username: ${SIBYL_DB_USER:sibyl}
+    password: ${SIBYL_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 8
+      connection-timeout: 8000
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
   web:
     resources:
       cache:
