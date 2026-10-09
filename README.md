@@ -1,58 +1,51 @@
 # Sibyl System
 
-Firmenneutrale, selbst gehostete und modulare Webplattform mit eigenem **PostgreSQL-Core**, Administrationsoberfläche und einem ausschließlich über **GitHub-Releases** versorgten Addon-Browser.
+Firmenneutrale, selbst gehostete modulare Plattform mit eigener **MySQL-8-Datenbank**, Administrationsoberfläche und einem GitHub-Release-basierten Addon-Browser.
 
-**Status (09.10.2026):** Entwicklungsstand, `test`-Branch. Core `v0.1.0-rc.1` ist auf der internen Labor-VM lauffähig; die **neue datenbankgestützte Version `v0.1.0-rc.2`** ist noch separat zu veröffentlichen und auf Cluster 3 zu deployen. Keine Produktions-/DMZ-Freigabe.
+## Standardinstallation
 
-## Standardinstallation mit PostgreSQL
+**MySQL ist die verbindliche Datenbank.** Die Standardinstallation für einen frischen Ubuntu-24.04-Server installiert **MySQL, Java 21 und Sibyl Core** gemeinsam. Die Datenbank `sibyl` wird mit einer eigenen eingeschränkten DB-Rolle und zufälligem Passwort eingerichtet. Flyway migriert das Schema bei jedem Update.
 
-Die Standardinstallation für eine frische **Ubuntu-24.04-VM** besteht aus einem einzigen Release-Installer:
+**Erstanmeldung** (nur bei vollständig leerer Installation): `admin` / `friend`. Das Passwort wird nur als BCrypt-Hash gespeichert. Vor dem Zugriff auf Admin-Einstellungen muss es verpflichtend geändert werden (mindestens 12 Zeichen). Weil das Standardpasswort allgemein bekannt ist, muss das System bis zur Änderung in einem beschränkten internen Netz bleiben und über vertrauenswürdiges HTTPS erreichbar sein.
 
-```text
-GitHub Release v0.1.0-rc.2
-├── sibyl-core-0.1.0-rc.2.jar
-├── install-sibyl-ubuntu-2404.sh
-├── STANDARD-INSTALLATION.md
-├── RELEASE-POLICY.md
-└── SHA256SUMS.txt
-```
+Ein Installer wird mit dem GitHub-Core-Pre-Release **`v0.1.0-rc.3`** ausgeliefert. Die Dateien werden nur aus veröffentlichten GitHub-Releases bezogen und ihre SHA-256-Digests geprüft. Eine vollständige Anleitung inklusive des MySQL-Schemas gibt es unter [docs/STANDARD-INSTALLATION.md](docs/STANDARD-INSTALLATION.md).
 
-Nach Prüfung der Release-Assets das Script `sudo bash install-sibyl-ubuntu-2404.sh` ausführen. Es installiert **PostgreSQL und Java 21**, erstellt die Datenbank `sibyl` samt zufällig generiertem Datenbankkennwort, lädt den Core aus dem **öffentlichen GitHub-Release** mit SHA-256-Validierung und startet ihn als eingeschränkten Systemdienst.
+## Administrationsbereiche
 
-**Erstanmeldung:** Benutzer `admin`, Passwort `friend`. Das bekannte Standardpasswort wird nur beim ersten Start einer leeren Datenbank als BCrypt-Hash gespeichert. **Vor jedem administrativen Eingriff muss es geändert werden** (neues Passwort mindestens 12 Zeichen). Bei regulären Neustarts und Updates bleiben Konten und Einstellungen unverändert. Den Erststart ausschließlich im geschützten Netz und mit einem vertrauenswürdigen HTTPS-Reverse-Proxy freigeben.
+- `/admin.html`: Login über zentrale MySQL-Benutzerdatenbank; Passwortwechsel beim ersten Anmelden.
+- Organisation und Design: Name, Sprache, Zeitzone und Akzentfarbe dauerhaft in der MySQL-Datenbank statt im Browser.
+- Addons: je ID versionierungsunabhängige, nicht geheime JSON-Konfigurationen in MySQL; Secret-Felder werden abgelehnt.
+- GitHub Addon-Browser: der **Sibyl-Server** fragt GitHub-Releases ohne Token ab, lädt nur veröffentlichte ZIP-Pakete und verifiziert Dateigröße, SHA-256, Version und Manifest. Der Download bedeutet derzeit `downloaded_not_activated`, noch nicht die Aktivierung des Moduls.
+- Audit-Ereignisse und serverseitige Admin-Zugriffskontrolle sind als Core-Fundament vorgesehen.
 
-Der Installer bindet den Core absichtlich nur auf `127.0.0.1:8080`; er erzeugt keine öffentliche HTTP-Anmeldung. Die detaillierte Anleitung, Datenbankstruktur und Wartungshinweise stehen unter [docs/STANDARD-INSTALLATION.md](docs/STANDARD-INSTALLATION.md).
+Mehrbenutzerverwaltung mit differenziertem RBAC, Secret-Store, Addon-Loader/Aktivierung, AD-Synchronisierung und fertige Theme-Verwaltung sind noch offen.
 
-## Administration
+## Architektur
 
-- `/admin.html`: Anmelden mit Datenbankkonto, verpflichtender Passwortwechsel bei Erstnutzung.
-- Organisation: Name, Sprache, Zeitzone, Design-Akzent zentral in PostgreSQL.
-- Addons: pro Addon eine versionierungsunabhängige, nicht geheime JSON-Konfiguration in `sibyl_addon_settings`. Zugangsdaten werden nicht in diesem Feld gespeichert.
-- GitHub Addon-Browser: serverseitige Prüfung veröffentlichter Releases und Pre-Releases, geschützter Download mit Digest/Manifest-Prüfung. **Download ist noch keine Aktivierung**.
-- Sicherheit: BCrypt-Passwort-Hashing, Admin-Berechtigung, CSRF-Prüfung, erstes Passwort zwingend ändern und Audit-Log.
-- Nicht fertig: Mehrbenutzer-RBAC, verschlüsselter Secret-Store, echtes Plugin-Laden/Aktivieren, automatische Formulare für Addon-Schemata.
+- Java 21 / Spring Boot 3.5.x
+- **MySQL 8**, InnoDB, utf8mb4, JDBC und Flyway
+- Neutrale Startseite + geschützter Adminbereich
+- Optionale Addons in eigenen Repositories mit SemVer-Version, ID und GitHub-Releases
+- `Sibyl.ad` als **optionale** Verzeichnisanbindung; keine AD-Pflicht
 
-Die Datenbankmigrationsdateien liegen in `backend/src/main/resources/db/migration/` (Flyway). Die Datenbank besitzt Benutzer, Organisation, Addon-Settings und Audit-Ereignisse.
+Die anfänglichen Addon-Repositories heißen `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning` und `Sibyl.doc`. Nur `Sibyl.ad v0.1.0-rc.1` ist derzeit als installierbares Addon-Pre-Release veröffentlicht. Weitere Erweiterungen werden nach und nach veröffentlicht.
 
-## Architektur und Addons
+## GitHub-Releases und Testbranch
 
-Sibyl Core (Java 21/Spring Boot 3.5.x), PostgreSQL, unabhängige optionale Addons und firmeneigene Theme-/Konfigurationswerte. Ein Active Directory ist **nicht erforderlich**: AD wird über `Sibyl.ad` als optionaler Verzeichnisprovider angebunden.
+Der `test`-Branch enthält die aktive Entwicklung, `main` ist der stabile Branch. **Installieren ausschließlich aus veröffentlichten GitHub-Releases**, niemals aus einem Branch-ZIP oder dem ungeprüften Stand eines Branches. Releases sind unveränderlich; für den Wechsel von PostgreSQL auf MySQL ist eine **neue** Core-Version `v0.1.0-rc.3` vorgesehen, statt den alten Release `v0.1.0-rc.2` zu überschreiben.
 
-Bekannte Repositories: `Sibyl.ad`, `Sibyl.inventory`, `Sibyl.planning`, `Sibyl.doc`. Weitere optionale Addons sind geplant (Suche, Network/IPAM, Berichtsheft, Kurse). Alle Addons besitzen eigene IDs und Versionen, eine Sibyl-Installation führt pro Modul-ID höchstens eine Version.
+Die CI unter `.github/workflows/db-ci.yml` testet MySQL 8 mit frischem Schema, Passwort-Hash, Startpasswortwechsel, Adminrechten und zentraler Konfigurationsspeicherung.
 
-Der **Sibyl-Server** fragt die öffentliche GitHub Releases API ohne Token ab und lädt veröffentlichte ZIP-Assets direkt von GitHub. Keine ZIP-Downloads aus `main`, `test` oder Entwicklerverzeichnissen. Für private Addon-Repositories wäre ein separat konfigurierter, serverseitiger GitHub-Zugang erforderlich. Siehe [docs/ADDON-GITHUB-RELEASE-FLOW.md](docs/ADDON-GITHUB-RELEASE-FLOW.md) und [docs/RELEASE-POLICY.md](docs/RELEASE-POLICY.md).
+## Cluster-3-Labor
 
-Das Grunddesign bleibt an `design/legacy-reference.css` angelehnt. Die Marke ist unabhängig vom Betreiber, die Oberfläche wird mit Organisationseinstellungen angepasst. Eine vollständige optische 1:1-Parität mit dem früheren System steht noch aus.
+Nur neue Labor-VMs im Proxmox-Spielwiesencluster:
 
-## Entwicklung und Tests
+- `172.22.120.240` – HTTPS-Edge / Reverse Proxy
+- `172.22.120.241` – Sibyl-App
+- `172.22.120.242` – **MySQL-8-Datenbank**
 
-```bash
-cd backend
-mvn clean verify
-```
+MySQL auf `.242` wurde installiert, mit TLS-Pflicht, eigener Datenbank und Benutzerkonto eingerichtet sowie per Firewall ausschließlich für `.241` geöffnet. Die neue App-Version ist **noch nicht umgeschaltet**, weil die sichere Weitergabe des neuen DB-Passworts an `.241` von einer Remote-Sicherheitsprüfung blockiert wurde. Auf `.241` läuft deshalb weiterhin der frühere Sibyl-Core `v0.1.0-rc.1`. Niemals eine erfolgreiche MySQL-Anmeldung oder Core-Umschaltung behaupten, bevor sie echt geprüft wurde.
 
-Die Tests benötigen eine PostgreSQL-Datenbank, z. B. den Postgres-16-Dienst des GitHub-CI-Workflows `.github/workflows/db-ci.yml`. Dort werden unter anderem Flyway-Migration, `admin`/`friend`-Bootstrap, Passwortwechselpflicht, Einstellungen und Sicherheitsendpunkte geprüft.
+Alte produktive und bestehende Testsysteme bleiben unverändert. Das aktuelle interne LAN ist **keine echte DMZ**. Self-signed Labor-HTTPS ist für eine echte Produktion durch ein vertrautes Zertifikat zu ersetzen.
 
-**Lab-Deployment:** ausschließlich Proxmox Cluster 3 mit Edge `172.22.120.240`, App `172.22.120.241`, Datenbank-VM `172.22.120.242`. Die derzeitige App `.241` läuft noch mit dem früheren Core-Release `v0.1.0-rc.1`, und auf der separaten Datenbank-VM wurde PostgreSQL noch nicht ausgerollt. Die neue Standardinstallation ist für **einen Host**; die bestehende Drei-VM-Laborumgebung benötigt eine gesonderte, kontrollierte Migration und Rückfallstrategie.
-
-**Produktion (Cluster 1) und bestehendes Testcluster (Cluster 2) bleiben unangetastet.**
+Die originale Designreferenz ist in `design/legacy-reference.css` archiviert.
