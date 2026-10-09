@@ -45,3 +45,12 @@ Das historische CSS ist unverändert unter `design/legacy-reference.css` aufbewa
 Vorbereitet auf dem Proxmox-Spielwiesencluster `ThrusterCluster`: Ubuntu-Vorlage 9500, erste VM 200 `sibyl-edge-lab`. Weitere VMs und Release-Deployment sind noch offen. Dokumentation auf Verwaltungsserver .118 in `/home/fiona/Documentation-Sibyl/`.
 
 **Produktion (Cluster 1) und Test (Cluster 2) werden nicht verändert.**
+
+
+## Neutrale Admin- und Addon-Browser-Oberfläche (aktuelle Cluster-3-Vorschau)
+
+Die komplette intern geprüfte, statische UI-Vorschau liegt unter `frontend/preview/` (Startseite, Admin, Addon-Browser, gemeinsame Styles/JS und verifizierter, datierter Katalog). Interne Preview-Routen: `/`, `/admin.html`, `/addons.html`. Alle Dateien wurden von 172.22.100.118 mit HTTP 200 geprüft.
+
+Die reguläre Core-Standardinstallation enthält jetzt `frontend/index.html` mit den drei Navigationszielen, `frontend/admin.html` mit einer **browserlokalen Konfigurationsvorschau** und weiterhin `frontend/addons.html` mit der späteren serverseitigen Core-Addon-API. Der Preview-Addon-Browser in `frontend/preview/` listet die vier bekannten Repositories, aber deaktiviert Download/Installation bis echte Releases plus geschütztes Backend vorhanden sind.
+
+**Sicherheitsgrenze:** Diese Vorschau darf nicht als gesicherte oder produktive Administration dargestellt werden. Änderungen werden nur im Browser-localStorage gespeichert, nicht in der Sibyl-Datenbank. Keine Kennwörter/API-Tokens über den HTTP-Preview-Endpunkt eingeben. TLS, Admin-Authentifizierung und RBAC vor Freigabe echter Schreib-/Installationsfunktionen implementieren.
