@@ -1,10 +1,12 @@
 name: Build & Publish Sibyl Core Release (MySQL)
 
 on:
+  push:
+    branches: [test]
   workflow_dispatch:
     inputs:
       version:
-        description: "SemVer without leading v (e.g. 0.1.0-rc.3)"
+        description: "SemVer without leading v (e.g. 0.1.0-rc.4)"
         required: true
         type: string
       channel:
@@ -46,7 +48,7 @@ jobs:
     steps:
       - name: Validate release branch and version
         env:
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.3' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.4' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
           RELEASE_REF: ${{ github.ref_name }}
         run: |
@@ -73,23 +75,29 @@ jobs:
           node --check frontend/admin.js
           node --check frontend/sibyl.js
           bash -n deploy/standard/install-ubuntu-2404.sh
+          bash -n deploy/cluster3/provision-unattended.sh
+          bash -n deploy/cluster3/bootstrap-mysql-db.sh
+          bash -n deploy/cluster3/activate-mysql-core.sh
+          ! SIBYL_TARGET=production bash deploy/cluster3/provision-unattended.sh >/dev/null 2>&1
           (cd backend && mvn --batch-mode --no-transfer-progress clean verify)
       - name: Create immutable versioned release artifacts
         env:
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.3' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.4' || inputs.version }}
         run: |
           set -euo pipefail
           mkdir -p dist
           cp backend/target/sibyl-core-*.jar "dist/sibyl-core-$RELEASE_VERSION.jar"
           cp deploy/standard/install-ubuntu-2404.sh "dist/install-sibyl-ubuntu-2404.sh"
           cp docs/STANDARD-INSTALLATION.md "dist/STANDARD-INSTALLATION.md"
+          tar -czf "dist/sibyl-cluster3-installer-$RELEASE_VERSION.tar.gz" \
+            -C deploy/cluster3 provision-unattended.sh bootstrap-mysql-db.sh activate-mysql-core.sh
           cp docs/RELEASE-POLICY.md "dist/RELEASE-POLICY.md"
-          (cd dist && sha256sum *.jar *.sh *.md > SHA256SUMS.txt)
+          (cd dist && sha256sum *.jar *.sh *.md *.tar.gz > SHA256SUMS.txt)
           (cd dist && sha256sum -c SHA256SUMS.txt)
       - name: Publish prerelease or stable release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.3' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.4' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
         run: |
           set -euo pipefail
