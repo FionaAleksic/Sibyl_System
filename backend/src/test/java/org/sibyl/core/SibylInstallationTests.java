@@ -104,4 +104,28 @@ class SibylInstallationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.accent", equalTo("teal")));
     }
+    @Test @Order(5)
+    void addonSettingsArePersistedWithoutAllowingPasswordFields() throws Exception {
+        String password = "Changed-Example-Password-2026!";
+        mvc.perform(put("/api/v1/admin/addon-settings/Sibyl.ad")
+                .with(httpBasic("admin", password)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"serverUrl":"ldaps://ad.example.org:636","pageSize":250}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.settings.serverUrl", equalTo("ldaps://ad.example.org:636")));
+        mvc.perform(get("/api/v1/admin/addon-settings/Sibyl.ad")
+                .with(httpBasic("admin", password)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.settings.pageSize", equalTo(250)));
+        mvc.perform(put("/api/v1/admin/addon-settings/Sibyl.ad")
+                .with(httpBasic("admin", password)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"bindPassword":"never-store-secrets"}
+                    """))
+            .andExpect(status().isBadRequest());
+    }
+
 }
