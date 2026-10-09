@@ -29,9 +29,10 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain security(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(registry -> registry
-                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/actuator/health", "/api/v1/addons/catalog").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated())
+                .requestMatchers("/api/**").denyAll()
+                .anyRequest().permitAll())
             .httpBasic(Customizer.withDefaults())
             .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()));
         return http.build();
