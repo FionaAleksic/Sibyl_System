@@ -54,8 +54,10 @@ public final class AddonController {
                     item.put("tag", release.tag());
                     item.put("version", release.tag());
                 }
+            } catch (GitHubReleaseService.RepositoryUnavailableException ex) {
+                item.put("status", "repository_unavailable");
+                item.put("error", "Repository ist privat, nicht vorhanden oder ohne Berechtigung nicht sichtbar");
             } catch (Exception ex) {
-                // Missing private GitHub credentials or API access must be explicit, not hidden.
                 item.put("status", "error");
                 item.put("error", "GitHub-Release-API nicht erreichbar oder nicht eingerichtet");
             }
