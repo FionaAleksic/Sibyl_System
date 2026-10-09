@@ -22,7 +22,7 @@ public class SecurityConfig {
             throw new IllegalStateException("Bootstrap admin name and BCrypt hash required via environment; refusing insecure startup");
         }
         return new InMemoryUserDetailsManager(
-            User.withUsername(name).password(hash).roles("ADMIN").build()
+            User.withUsername(name).password("{bcrypt}" + hash).roles("ADMIN").build()
         );
     }
 
