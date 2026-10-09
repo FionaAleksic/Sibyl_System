@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Sibyl System</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./addon-browser.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">S</span><span id="organization-name">Sibyl System</span></div>
+      <nav class="module-nav" aria-label="Hauptnavigation">
+        <a class="module-link" href="#start">Startseite</a>
+        <a class="module-link active" href="#addons" aria-current="page">Addon-Browser</a>
+        <a class="module-link" href="#admin">Admin</a>
+      </nav>
+      <span class="spacer"></span>
+      <button id="theme-toggle" type="button" class="secondary">Design wechseln</button>
+    </header>
+    <main id="main" class="main-content">
+      <div class="page-heading">
+        <div><p class="eyebrow">Plattformverwaltung</p><h1>Addon-Browser</h1>
+          <p class="subheading">Erweiterungen aus verifizierten GitHub-Releases herunterladen. Jeder Anbieter und jedes Addon ist separat konfigurierbar.</p></div>
+        <div><button id="refresh" type="button">Aktualisieren</button></div>
+      </div>
+      <div class="toolbar">
+        <label for="addon-search" class="sr-only">Addons suchen</label>
+        <input type="search" id="addon-search" placeholder="Name oder Addon-ID suchen…" autocomplete="off">
+        <label for="release-channel">Release-Kanal</label>
+        <select id="release-channel"><option value="stable">Stabil</option><option value="prerelease">Vorabversionen</option></select>
+      </div>
+      <div id="status" class="notice" role="status" aria-live="polite">Katalog wird geladen…</div>
+      <div id="catalog" class="addon-grid" aria-live="polite"></div>
+      <div class="help-panel"><h2>Installationsregeln</h2>
+        <p>Nur veröffentlichte Releases und Pre-Releases sind verfügbar. <strong>Kein Fallback auf <code>main</code> oder <code>test</code>.</strong> Ein heruntergeladenes Paket ist noch nicht automatisch als ausführbares Addon aktiviert.</p>
+        <p>Addons können nur durch berechtigte Administratoren und mit serverseitig hinterlegten GitHub-Zugangsdaten bezogen werden.</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
