@@ -124,7 +124,7 @@ $('organization-form').addEventListener('submit',async event=>{
       headers:{'Content-Type':'application/json',[csrfToken.header]:csrfToken.token},
       body:JSON.stringify(next)});
     populate(saved);
-    status('save-status','Einstellungen zentral in PostgreSQL gespeichert.');
+    status('save-status','Einstellungen zentral in MySQL gespeichert.');
   }catch(e){status('save-status','Speichern fehlgeschlagen: '+e.message,true);}
 });
 $('export-config').addEventListener('click',()=>{
