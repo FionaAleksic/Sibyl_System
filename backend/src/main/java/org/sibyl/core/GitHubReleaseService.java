@@ -33,6 +33,10 @@ public class GitHubReleaseService {
 
     public record ReleaseInfo(String tag, boolean prerelease, String body, JsonNode asset, String digest) { }
 
+    public static final class RepositoryUnavailableException extends IOException {
+        public RepositoryUnavailableException(String message) { super(message); }
+    }
+
     public GitHubReleaseService(ObjectMapper mapper) { this.mapper = mapper; }
 
     private HttpRequest request(URI uri, String accept) {
@@ -58,7 +62,18 @@ public class GitHubReleaseService {
         URI uri = URI.create(API + addon.repo() + suffix);
         HttpResponse<String> response = http.send(request(uri, "application/vnd.github+json"),
                 HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() == 404) return null;
+        if (response.statusCode() == 404) {
+            // GitHub responds 404 for both "no release" and invisible private repos.
+            // Probe repository metadata to report these cases accurately to the user.
+            HttpResponse<Void> repoProbe = http.send(
+                    request(URI.create(API + addon.repo()), "application/vnd.github+json"),
+                    HttpResponse.BodyHandlers.discarding());
+            if (repoProbe.statusCode() == 404 || repoProbe.statusCode() == 403)
+                throw new RepositoryUnavailableException("Repository ist nicht öffentlich erreichbar oder nicht vorhanden");
+            if (repoProbe.statusCode() != 200)
+                throw new IOException("GitHub repository lookup returned HTTP " + repoProbe.statusCode());
+            return null;
+        }
         if (response.statusCode() != 200) throw new IOException("GitHub release lookup returned HTTP " + response.statusCode());
         JsonNode json = mapper.readTree(response.body());
         JsonNode release;
