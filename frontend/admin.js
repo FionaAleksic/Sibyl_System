@@ -69,6 +69,7 @@ async function loadAccount(){
     $('admin-area').hidden=false;
     $('signed-in-as').textContent='Angemeldet als '+account.username;
     populate(await request('/settings'));
+    await listAddonSettings();
   }
 }
 $('login-form').addEventListener('submit',async event=>{
@@ -151,6 +152,46 @@ $('import-file').addEventListener('change',async()=>{
 $('reset-config').addEventListener('click',()=>{
   if(!settings)return;populate(settings);status('save-status','Nicht gespeicherte Änderungen verworfen.');
 });
+async function listAddonSettings(){
+  const select=$('addon-settings-id');
+  select.replaceChildren(new Option('Bitte Addon auswählen',''));
+  try{
+    const response=await fetch('/api/v1/addons/catalog?channel=prerelease',
+      {credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});
+    if(!response.ok)throw new Error('Katalog nicht erreichbar');
+    const payload=await response.json();
+    for(const item of payload.addons||[]){
+      select.add(new Option((item.name||item.id)+' ('+item.id+')',item.id));
+    }
+  }catch(error){status('addon-settings-status',error.message,true);}
+}
+$('addon-settings-id').addEventListener('change',async()=>{
+  const id=$('addon-settings-id').value;
+  if(!authorization||!id){$('addon-settings-json').value='{}';return;}
+  try{
+    const data=await request('/addon-settings/'+encodeURIComponent(id));
+    $('addon-settings-json').value=JSON.stringify(data.settings||{},null,2);
+    status('addon-settings-status','Einstellungen aus der Sibyl-Datenbank geladen.');
+  }catch(error){status('addon-settings-status','Laden fehlgeschlagen: '+error.message,true);}
+});
+$('addon-settings-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const id=$('addon-settings-id').value;
+  if(!authorization||!id){status('addon-settings-status','Bitte ein Addon auswählen.',true);return;}
+  try{
+    const json=JSON.parse($('addon-settings-json').value);
+    if(!json||typeof json!=='object'||Array.isArray(json))throw new Error('JSON-Objekt erforderlich');
+    await refreshCsrf();
+    const result=await request('/addon-settings/'+encodeURIComponent(id),{
+      method:'PUT',
+      headers:{'Content-Type':'application/json',[csrfToken.header]:csrfToken.token},
+      body:JSON.stringify(json)
+    });
+    $('addon-settings-json').value=JSON.stringify(result.settings,null,2);
+    status('addon-settings-status','Addon-Einstellungen zentral gespeichert.');
+  }catch(error){status('addon-settings-status','Speichern fehlgeschlagen: '+error.message,true);}
+});
+
 $('logout-button').addEventListener('click',logout);
 buttons.forEach(b=>b.addEventListener('click',()=>show(b.dataset.section)));
 document.querySelectorAll('button[data-go]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.go)));
