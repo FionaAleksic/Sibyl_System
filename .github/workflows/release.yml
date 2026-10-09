@@ -1,10 +1,10 @@
-name: Build & Publish Sibyl Core Release
+name: Build & Publish Sibyl Core Release (MySQL)
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "SemVer without leading v (e.g. 0.1.0-rc.2)"
+        description: "SemVer without leading v (e.g. 0.1.0-rc.3)"
         required: true
         type: string
       channel:
@@ -25,27 +25,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
-      postgres:
-        image: postgres:16
+      mysql:
+        image: mysql:8.0
         env:
-          POSTGRES_USER: sibyl
-          POSTGRES_PASSWORD: ci-only-do-not-use
-          POSTGRES_DB: sibyl
+          MYSQL_ROOT_PASSWORD: ci-root-only
+          MYSQL_USER: sibyl
+          MYSQL_PASSWORD: ci-only-do-not-use
+          MYSQL_DATABASE: sibyl
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd "pg_isready -U sibyl -d sibyl"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 15
     env:
-      SIBYL_DB_URL: jdbc:postgresql://127.0.0.1:5432/sibyl
+      SIBYL_DB_URL: jdbc:mysql://127.0.0.1:3306/sibyl?sslMode=REQUIRED&connectionTimeZone=UTC
       SIBYL_DB_USER: sibyl
       SIBYL_DB_PASSWORD: ci-only-do-not-use
     steps:
       - name: Validate release branch and version
         env:
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.2' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.3' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
           RELEASE_REF: ${{ github.ref_name }}
         run: |
@@ -65,7 +66,7 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/pom.xml
-      - name: Test PostgreSQL migration, admin login and configuration API
+      - name: Test MySQL migration, admin login and configuration API
         run: |
           set -euo pipefail
           node --check frontend/addons.js
@@ -75,7 +76,7 @@ jobs:
           (cd backend && mvn --batch-mode --no-transfer-progress clean verify)
       - name: Create immutable versioned release artifacts
         env:
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.2' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.3' || inputs.version }}
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -88,7 +89,7 @@ jobs:
       - name: Publish prerelease or stable release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.2' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.3' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
         run: |
           set -euo pipefail
@@ -99,7 +100,7 @@ jobs:
             exit 1
           fi
           if [[ "$RELEASE_CHANNEL" == prerelease ]]; then
-            gh release create "$tag" dist/* --target "$GITHUB_SHA" --prerelease --title "Sibyl Core $tag – PostgreSQL Standard Install" --generate-notes
+            gh release create "$tag" dist/* --target "$GITHUB_SHA" --prerelease --title "Sibyl Core $tag – MySQL Standard Install" --generate-notes
           else
             gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "Sibyl Core $tag" --generate-notes
           fi
