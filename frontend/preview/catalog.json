@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "releaseOnly": true,
+  "snapshotUtc": "2026-10-09T18:32:00Z",
+  "source": "verified-github-repository-releases",
+  "addons": [
+    {
+      "id": "Sibyl.ad",
+      "name": "Active Directory",
+      "repo": "FionaAleksic/Sibyl.ad",
+      "summary": "Optionaler Verzeichnisdienst für Benutzer, Gruppen und Synchronisierung.",
+      "kind": "Integration",
+      "icon": "AD",
+      "releases": []
+    },
+    {
+      "id": "Sibyl.inventory",
+      "name": "Inventar",
+      "repo": "FionaAleksic/Sibyl.inventory",
+      "summary": "Geräte, Komponenten und Peripherie zentral erfassen und verwalten.",
+      "kind": "Funktion",
+      "icon": "IN",
+      "releases": []
+    },
+    {
+      "id": "Sibyl.planning",
+      "name": "Planung",
+      "repo": "FionaAleksic/Sibyl.planning",
+      "summary": "Konfigurierbare Einsatzpläne, Aufgaben und faire Rotationen.",
+      "kind": "Funktion",
+      "icon": "PL",
+      "releases": []
+    },
+    {
+      "id": "Sibyl.doc",
+      "name": "Dokumentation",
+      "repo": "FionaAleksic/Sibyl.doc",
+      "summary": "Wissen und Dokumentation im Unternehmen organisieren.",
+      "kind": "Funktion",
+      "icon": "DO",
+      "releases": []
+    }
+  ]
+}
