@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Sibyl System – Administration und Anpassung">
+  <title>Administration · Sibyl System</title>
+  <link rel="stylesheet" href="./sibyl.css">
+  <script defer src="./sibyl.js"></script><script defer src="./admin.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Zum Inhalt springen</a>
+  <header class="topbar">
+    <a href="/" class="brand"><span class="mark" aria-hidden="true">S</span><span data-sibyl-brand>Sibyl System</span></a>
+    <nav class="module-nav" aria-label="Hauptnavigation">
+      <a href="/">Startseite</a><a href="/addons.html">Addon-Browser</a>
+      <a href="/admin.html" aria-current="page" class="active">Admin</a>
+    </nav>
+    <div class="grow"></div><button type="button" class="theme-toggle" data-theme-toggle>Darstellung: System</button>
+  </header>
+  <main id="main">
+    <div class="heading"><div>
+      <p class="kicker">Einstellungen</p>
+      <h1>Administration</h1>
+      <p>Ihre Sibyl-Installation an die Organisation anpassen, Erweiterungen verwalten und Zugänge konfigurieren.</p>
+    </div></div>
+    <div class="notice warning" role="status">
+      <strong>Ersteinrichtung – lokale Vorschau</strong>
+      <p>Sie bearbeiten derzeit einen Entwurf, der nur in diesem Browser gespeichert wird. Eine zentrale, geschützte Administration steht nach Installation des Sibyl-Core-Releases zur Verfügung. Geben Sie hier keine Zugangsdaten ein.</p>
+    </div>
+    <div class="columns">
+      <nav class="tab-nav" aria-label="Administrationsbereiche">
+        <button type="button" data-section="overview" class="active" aria-current="page">Übersicht</button>
+        <button type="button" data-section="organization">Organisation &amp; Design</button>
+        <button type="button" data-section="modules">Addon-Verwaltung</button>
+        <button type="button" data-section="integrations">Integrationen</button>
+        <button type="button" data-section="security">Benutzer &amp; Sicherheit</button>
+      </nav>
+      <div>
+        <section class="tab-panel" id="panel-overview" aria-labelledby="overview-title">
+          <div class="panel">
+            <div class="panel-head"><h2 id="overview-title">Ihre Plattform</h2><p>Ein zentraler Ort für die Verwaltung von Sibyl System.</p></div>
+            <div class="org-preview">
+              <div class="org-mark" data-org-initial>S</div>
+              <div><strong data-org-preview>Sibyl System</strong><div class="small muted">Konfigurationsvorschau</div></div>
+            </div>
+            <div class="details-list">
+              <div>Plattform</div><div>Sibyl System</div>
+              <div>Bereitstellung</div><div>Selbst gehostete Installation</div>
+              <div>Konfiguration</div><div>Browserlokaler Entwurf</div>
+              <div>Addon-Quelle</div><div>GitHub Releases / Pre-Releases</div>
+              <div>Anmeldung</div><div>Noch nicht eingerichtet</div>
+            </div>
+            <div class="actions">
+              <button class="button" type="button" data-go="organization">Organisation anpassen</button>
+              <a href="/addons.html" class="button secondary">Addon-Browser öffnen</a>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Nächste Schritte</h3>
+            <p class="muted">Konfigurieren Sie vorab das Erscheinungsbild. Nach Bereitstellung des Core-Backends können Benutzer, Rollen, externe Verzeichnisse und Addons mit gesicherten Administrationsrechten eingerichtet werden.</p>
+          </div>
+        </section>
+        <section class="tab-panel" id="panel-organization" aria-labelledby="organization-title" hidden>
+          <div class="panel">
+            <div class="panel-head"><h2 id="organization-title">Organisation &amp; Design</h2><p>Diese Einstellungen werden als Vorschau nur in Ihrem Browser gespeichert.</p></div>
+            <form id="organization-form">
+              <div class="field"><label for="organization-name">Name Ihrer Organisation</label>
+                <input type="text" id="organization-name" name="organization" maxlength="80" placeholder="z. B. Musterfirma" autocomplete="organization">
+                <span class="hint">Wird in der Kopfzeile Ihrer persönlichen Vorschau angezeigt.</span></div>
+              <div class="field-row">
+                <div class="field"><label for="organization-language">Oberflächensprache</label>
+                  <select id="organization-language" name="language"><option value="de">Deutsch</option><option value="en">English (geplant)</option></select>
+                  <span class="hint">Derzeit steht die Oberfläche nur auf Deutsch zur Verfügung.</span></div>
+                <div class="field"><label for="organization-timezone">Zeitzone</label>
+                  <select id="organization-timezone" name="timezone">
+                    <option value="Europe/Berlin">Europa / Berlin</option>
+                    <option value="Europe/London">Europa / London</option>
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">Amerika / New York</option>
+                  </select></div>
+              </div>
+              <div class="field"><label for="organization-accent">Akzentfarbe – Designentwurf</label>
+                <select id="organization-accent" name="accent">
+                  <option value="classic">Klassisch (Blau)</option>
+                  <option value="teal">Petrol</option>
+                  <option value="violet">Violett</option>
+                </select>
+                <span class="hint">Farbauswahl als gespeicherter Entwurf; vollständig globale Theme-Installation folgt mit dem Core.</span>
+              </div>
+              <div class="actions">
+                <button type="submit" class="button">Vorschau speichern</button>
+                <button type="button" class="button secondary" id="export-config">Entwurf exportieren</button>
+                <label for="import-file" class="button secondary" style="cursor:pointer">Entwurf importieren</label>
+                <input type="file" id="import-file" accept=".json,application/json" hidden>
+                <button type="button" class="button ghost" id="reset-config">Zurücksetzen</button>
+              </div>
+              <p class="small" id="save-status" role="status" aria-live="polite" style="margin-top:12px"></p>
+            </form>
+          </div>
+        </section>
+        <section class="tab-panel" id="panel-modules" aria-labelledby="modules-title" hidden>
+          <div class="panel">
+            <div class="panel-head"><h2 id="modules-title">Addon-Verwaltung</h2><p>Erweiterungen aus eigenen Repositories ergänzen, Versionen prüfen und verwalten.</p></div>
+            <p>Der integrierte Addon-Browser enthält bereits die bekannten Modul-Repositories. Alle bisherigen Repositories haben noch keine installierbaren Releases.</p>
+            <div class="actions"><a href="/addons.html" class="button">Zum Addon-Browser</a></div>
+            <div class="divider"></div>
+            <p class="small muted">Paketinstallation, Dependencies, Aktivierung und Update-Rollback benötigen den authentifizierten Sibyl Core mit eigener Datenbank und Release-API.</p>
+          </div>
+        </section>
+        <section class="tab-panel" id="panel-integrations" aria-labelledby="integrations-title" hidden>
+          <div class="panel">
+            <div class="panel-head"><h2 id="integrations-title">Integrationen</h2><p>Externe Dienste optional mit Sibyl verbinden.</p></div>
+            <div class="details-list">
+              <div>Active Directory</div><div>Optionaler Provider über Sibyl.ad – noch nicht installiert</div>
+              <div>GitHub</div><div>Release-Quelle; serverseitiger Zugriff noch einzurichten</div>
+              <div>LDAP / OIDC</div><div>Als zusätzliche Identity-Provider geplant</div>
+              <div>DHCP / DNS</div><div>Connectoren später über Network-Mapping</div>
+            </div>
+            <div class="divider"></div>
+            <p class="small muted">API-Token, Service-Account-Kennwörter und andere Zugangsdaten dürfen erst über das gesicherte Backend eingegeben werden.</p>
+          </div>
+        </section>
+        <section class="tab-panel" id="panel-security" aria-labelledby="security-title" hidden>
+          <div class="panel">
+            <div class="panel-head"><h2 id="security-title">Benutzer &amp; Sicherheit</h2><p>Rollen, Richtlinien und Administratorzugänge verwalten.</p></div>
+            <div class="details-list">
+              <div>Identitätsquelle</div><div>Sibyl Core (eigene Datenbank) – noch nicht bereitgestellt</div>
+              <div>Rollen / Berechtigungen</div><div>Core-API mit serverseitiger Prüfung geplant</div>
+              <div>Login / MFA</div><div>Erst nach HTTPS und geschütztem Backend</div>
+              <div>Änderungsprotokolle</div><div>Core Audit Log geplant</div>
+            </div>
+            <div class="divider"></div>
+            <div class="notice warning"><strong>Keine Administrationsanmeldung über HTTP</strong><p>Für eine sichere Anmeldung wird HTTPS benötigt. Die Vorschau enthält weder Login-Felder noch administrative Schreibzugriffe auf den Server.</p></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer><span>Sibyl System</span><span>Ihre Plattform. Ihre Konfiguration.</span></footer>
+</body>
+</html>
