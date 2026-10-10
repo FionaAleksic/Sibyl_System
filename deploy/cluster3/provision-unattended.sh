@@ -7,7 +7,7 @@ set -euo pipefail
 set +x
 umask 077
 
-VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.5}"
+VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.6}"
 [[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] ||
   { echo "Invalid Core release tag" >&2; exit 2; }
 [[ "${SIBYL_TARGET:-}" == cluster3-lab ]] || {
