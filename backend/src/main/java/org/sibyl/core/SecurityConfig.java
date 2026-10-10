@@ -18,6 +18,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(registry -> registry
                 .requestMatchers("/login.html", "/login.css", "/login.js",
                                  "/login", "/api/v1/auth/csrf", "/actuator/health").permitAll()
+                .requestMatchers("/preview/**").denyAll()
                 .requestMatchers("/admin.html", "/admin.js", "/addons.html",
                                  "/addons.js", "/catalog.json", "/api/v1/admin/**",
                                  "/api/v1/addons/**").hasRole("ADMIN")
