@@ -1,6 +1,6 @@
 # Sibyl System – Anmeldung, Benutzerrollen und Schutz aller Seiten
 
-**Entwicklung:** GitHub `test`; vorgesehen für Core `v0.1.0-rc.5`.
+**Entwicklung:** GitHub `test`; vorgesehen für Core `v0.1.0-rc.7`.
 
 ## Sichtbarkeit
 
