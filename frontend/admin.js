@@ -21,23 +21,11 @@ function status(id,message,error=false){
   $(id).textContent=message;
   $(id).style.color=error?'var(--danger)':'var(--accent)';
 }
-function hideAll(){
-  $('admin-area').hidden=true;
-  $('password-change-box').hidden=true;
-  $('admin-login-box').hidden=true;
-}
-function logout(){
-  authorization=null;account=null;csrfToken=null;settings=null;
-  $('login-password').value='';
-  $('old-password').value='';$('new-password').value='';$('confirm-password').value='';
-  hideAll();$('admin-login-box').hidden=false;
-}
-function authHeaders(){return {Authorization:authorization,Accept:'application/json'};}
 async function request(path,options={}){
-  const headers={...authHeaders(),...(options.headers||{})};
+  const headers={Accept:'application/json',...(options.headers||{})};
   const res=await fetch('/api/v1/admin'+path,{...options,credentials:'same-origin',headers,cache:'no-store'});
   if(!res.ok){
-    if(res.status===401)logout();
+    if(res.status===401)location.replace('/login.html');
     let reason='HTTP '+res.status;
     try{const error=await res.json();if(error.error)reason+=': '+error.error}catch{}
     throw new Error(reason);
@@ -45,9 +33,9 @@ async function request(path,options={}){
   return await res.json();
 }
 async function refreshCsrf(){
-  const response=await request('/csrf');
-  if(!response.header||!response.token)throw new Error('CSRF-Token fehlt');
-  csrfToken=response;
+  const res=await fetch('/api/v1/auth/csrf',{credentials:'same-origin',cache:'no-store'});
+  if(!res.ok)throw new Error('CSRF-Token nicht verfügbar');
+  csrfToken=await res.json();
 }
 function populate(s){
   settings=s;
@@ -60,55 +48,17 @@ function populate(s){
   document.querySelectorAll('[data-sibyl-brand]').forEach(x=>x.textContent=s.organization||'Sibyl System');
 }
 async function loadAccount(){
-  account=await request('/account');
-  hideAll();
-  if(account.mustChangePassword){
-    $('password-change-box').hidden=false;
-    status('password-change-status','Das Startpasswort muss vor der Administration geändert werden.');
-  }else{
-    $('admin-area').hidden=false;
-    $('signed-in-as').textContent='Angemeldet als '+account.username;
-    populate(await request('/settings'));
-    await listAddonSettings();
-  }
+  const res=await fetch('/api/v1/auth/me',{credentials:'same-origin',cache:'no-store'});
+  if(!res.ok){location.replace('/login.html');return;}
+  account=await res.json();
+  if(account.mustChangePassword){location.replace('/login.html?change=1');return;}
+  if(account.role!=='ADMIN'){location.replace('/');return;}
+  authorization=true;
+  $('signed-in-as').textContent='Angemeldet als '+account.username;
+  populate(await request('/settings'));
+  await listAddonSettings();
+  await listUsers();
 }
-$('login-form').addEventListener('submit',async event=>{
-  event.preventDefault();
-  if(location.protocol!=='https:'){
-    status('login-status','Zur Anmeldung ist HTTPS erforderlich.',true);return;
-  }
-  const name=$('login-name').value.trim(), pass=$('login-password').value;
-  if(!name||!pass)return;
-  // encode Unicode credentials without storing them in localStorage or a cookie
-  authorization='Basic '+btoa(String.fromCharCode(...new TextEncoder().encode(name+':'+pass)));
-  $('login-password').value='';
-  try{
-    await refreshCsrf();
-    await loadAccount();
-  }catch(e){
-    authorization=null;
-    hideAll();$('admin-login-box').hidden=false;
-    status('login-status','Anmeldung fehlgeschlagen: '+e.message,true);
-  }
-});
-$('password-change-form').addEventListener('submit',async event=>{
-  event.preventDefault();
-  const old=$('old-password').value,next=$('new-password').value,confirm=$('confirm-password').value;
-  if(next!==confirm){status('password-change-status','Die neuen Passwörter stimmen nicht überein.',true);return;}
-  if(next.length<12||next==='friend'||next===old){status('password-change-status','Ein neues Passwort mit mindestens zwölf Zeichen ist erforderlich.',true);return;}
-  try{
-    await refreshCsrf();
-    await request('/account/password',{method:'POST',
-      headers:{'Content-Type':'application/json',[csrfToken.header]:csrfToken.token},
-      body:JSON.stringify({currentPassword:old,newPassword:next})});
-    logout();
-    status('login-status','Passwort geändert. Bitte mit dem neuen Passwort erneut anmelden.');
-  }catch(e){
-    status('password-change-status','Passwortänderung fehlgeschlagen: '+e.message,true);
-  }finally{
-    $('old-password').value='';$('new-password').value='';$('confirm-password').value='';
-  }
-});
 $('organization-form').addEventListener('submit',async event=>{
   event.preventDefault();if(!authorization)return;
   const next={
@@ -192,11 +142,45 @@ $('addon-settings-form').addEventListener('submit',async event=>{
   }catch(error){status('addon-settings-status','Speichern fehlgeschlagen: '+error.message,true);}
 });
 
-$('logout-button').addEventListener('click',logout);
+async function listUsers(){
+  try{
+    const users=await request('/users');
+    $('user-list').replaceChildren();
+    for(const user of users){
+      const key=document.createElement('div');key.textContent=user.username;
+      const val=document.createElement('div');
+      val.textContent=(user.role==='ADMIN'?'Administrator':'Benutzer')+
+        (user.mustChangePassword?' · Passwortwechsel ausstehend':'');
+      $('user-list').append(key,val);
+    }
+  }catch(error){status('create-user-status','Benutzer konnten nicht geladen werden: '+error.message,true);}
+}
+$('create-user-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const username=$('new-username').value.trim();
+  const password=$('new-user-password').value;
+  const role=$('new-role').value;
+  try{
+    await refreshCsrf();
+    const user=await request('/users',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',[csrfToken.header]:csrfToken.token},
+      body:JSON.stringify({username,password,role})
+    });
+    $('new-user-password').value='';
+    $('new-username').value='';
+    status('create-user-status','Konto '+user.username+' erstellt. Startpasswort sicher an die Person übergeben.');
+    await listUsers();
+  }catch(error){status('create-user-status','Konto konnte nicht erstellt werden: '+error.message,true);}
+});
+$('logout-button').addEventListener('click',async()=>{
+  try{
+    await refreshCsrf();
+    await fetch('/logout',{method:'POST',credentials:'same-origin',
+      headers:{[csrfToken.header]:csrfToken.token}});
+  }finally{location.replace('/login.html');}
+});
 buttons.forEach(b=>b.addEventListener('click',()=>show(b.dataset.section)));
 document.querySelectorAll('button[data-go]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.go)));
-logout();show(validPages.includes(location.hash.slice(1))?location.hash.slice(1):'overview');
-if(location.protocol!=='https:'){
-  status('login-status','Administratoranmeldung nur über HTTPS möglich.',true);
-  $('login-form').querySelector('button[type=submit]').disabled=true;
-}
+show(validPages.includes(location.hash.slice(1))?location.hash.slice(1):'overview');
+loadAccount().catch(()=>location.replace('/login.html'));
