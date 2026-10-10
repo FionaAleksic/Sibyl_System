@@ -59,3 +59,11 @@ MySQL auf `.242` wurde installiert, mit TLS-Pflicht, eigener Datenbank und Benut
 Alte produktive und bestehende Testsysteme bleiben unverändert. Das aktuelle interne LAN ist **keine echte DMZ**. Self-signed Labor-HTTPS ist für eine echte Produktion durch ein vertrautes Zertifikat zu ersetzen.
 
 Die originale Designreferenz ist in `design/legacy-reference.css` archiviert.
+
+## Login-only-Sicherheit (rc.7)
+
+Ab dem [veröffentlichten Core-Release v0.1.0-rc.7](https://github.com/FionaAleksic/Sibyl_System/releases/tag/v0.1.0-rc.7) zeigt Sibyl vor der Anmeldung **ausschließlich die Login-Maske**. Die einzige initiale Benutzerkennung ist `admin` mit dem einmaligen Startpasswort `friend`, das vor normalen Funktionen geändert werden muss. Administratoren können nach dem Login `USER`- und `ADMIN`-Konten in der MySQL-Datenbank anlegen. Normale Benutzer erhalten keinen Zugriff auf Admin und Addon-Browser (serverseitig HTTP 403). Anonyme API-Aufrufe erhalten HTTP 401.
+
+Die Cluster-Installationsdatei `sibyl-cluster3-installer-0.1.0-rc.7.tar.gz` enthält einen Edge-HTTPS-Schritt, der den alten statischen HTTP-Zugang abschaltet. Die Anmeldung verwendet geschützte, serverseitige Sitzungen, keinen Browser-Basic-Auth-Header. Siehe [docs/ACCESS-CONTROL.md](docs/ACCESS-CONTROL.md).
+
+**Betriebsstatus:** Der Release wurde erfolgreich mit MySQL-Tests und echten HTTP-Anfragen validiert. Er ist noch **nicht** auf dem Cluster-3-Appserver aktiviert, weil der Remote-Deploymentzugriff beim Versuch blockiert wurde. Die bisherige Test-Webseite läuft noch mit dem Core `rc.4` und ist bis zur kontrollierten Umstellung **nicht login-only**. Nicht als abgenommen ausgeben.
