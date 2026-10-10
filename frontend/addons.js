@@ -10,17 +10,11 @@ const notice=document.querySelector('#catalog-notice');
 const search=document.querySelector('#addon-search');
 const channel=document.querySelector('#release-channel');
 const refresh=document.querySelector('#refresh');
-const form=document.querySelector('#admin-login');
-const nameField=document.querySelector('#admin-name');
-const passwordField=document.querySelector('#admin-password');
-const authStatus=document.querySelector('#admin-auth-status');
-const logoutButton=document.querySelector('#admin-logout');
-const connectButton=document.querySelector('#admin-connect');
 let entries=[];
-let authHeader=null;
+let canDownload=true;
 let live=false;
 let busy=false;
-const secure=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const secure=location.protocol==='https:'||location.hostname==='localhost';
 function el(tag,value,css=''){
   const x=document.createElement(tag);if(value!==undefined)x.textContent=String(value??'');
   if(css)x.className=css;return x;
@@ -57,8 +51,8 @@ function render(){
     foot.append(link);
     const button=el('button',a.status==='downloaded'?'Heruntergeladen':'Von GitHub laden','button');
     button.type='button';
-    button.disabled=busy||!secure||!authHeader||a.status!=='available';
-    button.title=!secure?'HTTPS erforderlich':!authHeader?'Bitte als Administrator anmelden':
+    button.disabled=busy||!secure||!canDownload||a.status!=='available';
+    button.title=!secure?'HTTPS erforderlich':!canDownload?'Adminanmeldung erforderlich':
       a.status!=='available'?'Kein installierbarer Release für den Kanal':'Veröffentlichtes GitHub ZIP abrufen und prüfen';
     button.addEventListener('click',()=>download(a,button));
     foot.append(button);card.append(foot);body.append(card);
@@ -97,49 +91,18 @@ async function load(){
     }
   }finally{refresh.disabled=false;}
 }
-form.addEventListener('submit',async event=>{
-  event.preventDefault();
-  if(!secure){authStatus.textContent='Anmeldung nur über HTTPS möglich.';return;}
-  const username=nameField.value.trim(), password=passwordField.value;
-  if(!username||!password)return;
-  connectButton.disabled=true;
-  try{
-    const value='Basic '+btoa(unescape(encodeURIComponent(username+':'+password)));
-    const res=await fetch('/api/v1/admin/csrf',{credentials:'same-origin',headers:{Authorization:value,Accept:'application/json'},cache:'no-store'});
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const json=await res.json();
-    if(!json.header||!json.token)throw new Error('CSRF-Handshake fehlgeschlagen');
-    authHeader=value;
-    passwordField.value='';
-    passwordField.disabled=true;nameField.disabled=true;
-    connectButton.hidden=true;logoutButton.hidden=false;
-    authStatus.textContent='Administrator angemeldet. Verfügbare GitHub-Releases können jetzt auf diesen Server heruntergeladen werden.';
-    render();
-  }catch(error){
-    authHeader=null;
-    passwordField.value='';
-    authStatus.textContent='Anmeldung fehlgeschlagen: '+error.message;
-    render();
-  }finally{connectButton.disabled=false;}
-});
-logoutButton.addEventListener('click',()=>{
-  authHeader=null;nameField.disabled=false;passwordField.disabled=false;
-  connectButton.hidden=false;logoutButton.hidden=true;
-  authStatus.textContent='Administrativer Download abgemeldet.';
-  render();
-});
 async function download(addon,button){
-  if(!secure||!authHeader||!live||addon.status!=='available')return;
+  if(!secure||!canDownload||!live||addon.status!=='available')return;
   if(!confirm(addon.name+' '+addon.tag+' wirklich von GitHub herunterladen und auf dem Sibyl-Server prüfen?'))return;
   busy=true;render();
   statusText.textContent='Sibyl-Server lädt '+addon.id+' von GitHub …';
   try{
-    const csrfResponse=await fetch('/api/v1/admin/csrf',{headers:{Authorization:authHeader,Accept:'application/json'},credentials:'same-origin'});
+    const csrfResponse=await fetch('/api/v1/auth/csrf',{credentials:'same-origin',cache:'no-store'});
     if(!csrfResponse.ok)throw new Error('CSRF HTTP '+csrfResponse.status);
     const csrf=await csrfResponse.json();
     const response=await fetch('/api/v1/admin/addons/'+encodeURIComponent(addon.id)+'/download',{
       method:'POST',credentials:'same-origin',
-      headers:{Authorization:authHeader,'Content-Type':'application/json',[csrf.header]:csrf.token},
+      headers:{'Content-Type':'application/json',[csrf.header]:csrf.token},
       body:JSON.stringify({channel:channel.value,releaseTag:addon.tag})
     });
     if(!response.ok){
@@ -155,8 +118,8 @@ async function download(addon,button){
   }finally{busy=false;render();}
 }
 if(!secure){
-  form.hidden=true;
-  authStatus.textContent='HTTPS für Administratorfunktionen erforderlich. Über HTTP ist nur die Addon-Suche verfügbar.';
+  canDownload=false;
+  statusText.textContent='HTTPS erforderlich.';
 }
 search.addEventListener('input',render);
 channel.addEventListener('change',load);
