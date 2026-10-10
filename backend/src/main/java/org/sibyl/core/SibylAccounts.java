@@ -2,6 +2,8 @@ package org.sibyl.core;
 
 import org.springframework.boot.ApplicationRunner;
 import java.util.Map;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -54,8 +56,38 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
     }
 
     public Map<String, Object> account(String username) {
-        return Map.of("username", username, "role", "ADMIN",
+        String role = jdbc.queryForObject(
+            "SELECT role FROM sibyl_users WHERE username=?", String.class, username);
+        return Map.of("username", username, "role", role,
             "mustChangePassword", mustChangePassword(username));
+    }
+
+    public record AccountInfo(String username, String role, boolean enabled, boolean mustChangePassword) {}
+
+    public List<AccountInfo> listAccounts() {
+        return jdbc.query(
+            "SELECT username,role,enabled,must_change_password FROM sibyl_users ORDER BY username",
+            (rs, row) -> new AccountInfo(rs.getString("username"), rs.getString("role"),
+                rs.getBoolean("enabled"), rs.getBoolean("must_change_password")));
+    }
+
+    @Transactional
+    public AccountInfo createAccount(String actor, String username, String password, String role) {
+        if (username == null || !username.matches("[a-zA-Z][a-zA-Z0-9._-]{2,49}")
+            || password == null || password.length() < 12 || password.length() > 128
+            || password.equals("friend")
+            || !("USER".equals(role) || "ADMIN".equals(role))) {
+            throw new IllegalArgumentException("Invalid account fields");
+        }
+        String normalized = username.toLowerCase(Locale.ROOT);
+        if (normalized.equals("admin")) throw new IllegalArgumentException("Reserved account");
+        jdbc.update("""
+            INSERT INTO sibyl_users (username, password_hash, role, must_change_password, enabled)
+            VALUES (?, ?, ?, TRUE, TRUE)
+            """, normalized, encoder.encode(password), role);
+        jdbc.update("INSERT INTO sibyl_audit_events (actor, action) VALUES (?, ?)",
+            actor, "account-created:" + normalized + ":" + role);
+        return new AccountInfo(normalized, role, true, true);
     }
 
     @Transactional
