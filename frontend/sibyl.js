@@ -54,5 +54,33 @@
       });
     });
     loadBranding();
+    fetch('/api/v1/auth/me',{credentials:'same-origin',cache:'no-store'}).then(async response=>{
+      if(!response.ok){location.replace('/login.html');return;}
+      const account=await response.json();
+      if(account.mustChangePassword){location.replace('/login.html?change=1');return;}
+      const nav=document.querySelector('.module-nav');
+      if(account.role==='ADMIN'&&nav&&
+          !nav.querySelector('a[href*="admin.html"]')){
+        for(const [path,label] of [['/addons.html','Addon-Browser'],['/admin.html','Admin']]){
+          const a=document.createElement('a');a.href=path;a.textContent=label;nav.append(a);
+        }
+      }
+      const bar=document.querySelector('.topbar');
+      if(bar&&!document.querySelector('[data-logout]')){
+        const logout=document.createElement('button');
+        logout.type='button';logout.className='theme-toggle';
+        logout.textContent='Abmelden';logout.dataset.logout='true';
+        logout.addEventListener('click',async()=>{
+          const response=await fetch('/api/v1/auth/csrf',{credentials:'same-origin',cache:'no-store'});
+          if(response.ok){
+            const csrf=await response.json();
+            await fetch('/logout',{method:'POST',credentials:'same-origin',
+              headers:{[csrf.header]:csrf.token}});
+          }
+          location.replace('/login.html');
+        });
+        bar.append(logout);
+      }
+    }).catch(()=>{location.replace('/login.html');});
   });
 })();
