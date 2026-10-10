@@ -26,33 +26,9 @@
     </div></div>
     <div class="notice warning" role="status">
       <strong>Geschützte Administration</strong>
-      <p>Einstellungen und Benutzer werden in der Datenbank Ihrer eigenen Sibyl-Installation gespeichert. Der erste Administrator heißt <code>admin</code>; das Bootstrap-Passwort muss nach der ersten Anmeldung geändert werden.</p>
+      <p>Einstellungen und Benutzer werden in der Datenbank Ihrer eigenen Sibyl-Installation gespeichert. Neue Konten werden ausschließlich von Administratoren angelegt. Die Anmeldung erfolgt zentral über die Sibyl-Loginseite.</p>
     </div>
-    <section id="admin-login-box" class="panel" aria-labelledby="login-title">
-      <h2 id="login-title">Als Administrator anmelden</h2>
-      <form id="login-form">
-        <div class="field-row">
-          <div class="field"><label for="login-name">Benutzername</label><input id="login-name" type="text" autocomplete="username" required value="admin"></div>
-          <div class="field"><label for="login-password">Passwort</label><input id="login-password" type="password" autocomplete="current-password" required></div>
-        </div>
-        <button class="button" type="submit">Anmelden</button>
-        <p id="login-status" role="status" aria-live="polite" class="small" style="margin-top:12px"></p>
-      </form>
-    </section>
-    <section id="password-change-box" class="panel" hidden aria-labelledby="pw-title">
-      <h2 id="pw-title">Startpasswort ändern</h2>
-      <p>Vor der ersten Konfiguration müssen Sie das vorgegebene Passwort durch ein eigenes Passwort mit mindestens zwölf Zeichen ersetzen.</p>
-      <form id="password-change-form">
-        <div class="field"><label for="old-password">Bisheriges Passwort</label><input type="password" id="old-password" autocomplete="current-password" required></div>
-        <div class="field-row">
-          <div class="field"><label for="new-password">Neues Passwort</label><input type="password" id="new-password" autocomplete="new-password" minlength="12" required></div>
-          <div class="field"><label for="confirm-password">Passwort bestätigen</label><input type="password" id="confirm-password" autocomplete="new-password" minlength="12" required></div>
-        </div>
-        <button class="button" type="submit">Passwort speichern</button>
-        <p id="password-change-status" role="status" aria-live="polite" class="small" style="margin-top:12px"></p>
-      </form>
-    </section>
-    <div id="admin-area" hidden>
+    <div id="admin-area">
     <div class="actions" style="margin-bottom:16px">
       <span id="signed-in-as" class="small muted"></span>
       <button type="button" id="logout-button" class="button secondary">Abmelden</button>
@@ -169,14 +145,22 @@
         <section class="tab-panel" id="panel-security" aria-labelledby="security-title" hidden>
           <div class="panel">
             <div class="panel-head"><h2 id="security-title">Benutzer &amp; Sicherheit</h2><p>Rollen, Richtlinien und Administratorzugänge verwalten.</p></div>
-            <div class="details-list">
-              <div>Identitätsquelle</div><div>Sibyl Core (eigene Datenbank) – noch nicht bereitgestellt</div>
-              <div>Rollen / Berechtigungen</div><div>Admin-Rechte werden serverseitig geprüft</div>
-              <div>Login / MFA</div><div>HTTPS und Datenbank-Authentifizierung aktiv</div>
-              <div>Änderungsprotokolle</div><div>Core Audit-Log Tabelle angelegt</div>
-            </div>
+            <p class="small muted">Nur Administratoren dürfen Konten anlegen. Jeder neue Benutzer muss das Startpasswort beim ersten Login ersetzen.</p>
+            <form id="create-user-form">
+              <div class="field-row">
+                <div class="field"><label for="new-username">Benutzername</label>
+                  <input id="new-username" minlength="3" maxlength="50" pattern="[a-zA-Z][a-zA-Z0-9._-]{2,49}" autocomplete="off" required></div>
+                <div class="field"><label for="new-role">Rolle</label>
+                  <select id="new-role"><option value="USER">Benutzer</option><option value="ADMIN">Administrator</option></select></div>
+              </div>
+              <div class="field"><label for="new-user-password">Einmaliges Startpasswort (mindestens 12 Zeichen)</label>
+                <input id="new-user-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+              <button type="submit" class="button">Konto erstellen</button>
+              <p id="create-user-status" role="status" aria-live="polite" class="small"></p>
+            </form>
             <div class="divider"></div>
-            <div class="notice warning"><strong>Nur über HTTPS anmelden</strong><p>Die Zugangsdaten werden an den Sibyl-Core übermittelt, nicht an GitHub. Für produktive Installationen ist ein vertrauenswürdiges Zertifikat erforderlich.</p></div>
+            <h3>Vorhandene Benutzerkonten</h3>
+            <div id="user-list" class="details-list" role="list" aria-label="Benutzerkonten"></div>
           </div>
         </section>
       </div>
