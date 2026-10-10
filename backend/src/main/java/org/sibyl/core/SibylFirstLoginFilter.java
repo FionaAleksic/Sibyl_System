@@ -8,31 +8,36 @@ import java.io.IOException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/** New accounts may only rotate the initial password until that is completed. */
 public class SibylFirstLoginFilter extends OncePerRequestFilter {
     private final SibylAccounts accounts;
     public SibylFirstLoginFilter(SibylAccounts accounts) { this.accounts = accounts; }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res,
                                     FilterChain chain) throws ServletException, IOException {
-        String path = request.getRequestURI();
-        if (path.startsWith("/api/v1/admin/")
-            && !path.equals("/api/v1/admin/csrf")
-            && !path.equals("/api/v1/admin/account")
-            && !path.equals("/api/v1/admin/account/password")) {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated()
-                && !(auth instanceof AnonymousAuthenticationToken)
-                && accounts.mustChangePassword(auth.getName())) {
-                response.setStatus(423);
-                response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"error\":\"password_change_required\"}");
-                return;
+        String path = req.getRequestURI();
+        boolean allowed = path.equals("/login.html") || path.equals("/login.js")
+            || path.equals("/login.css") || path.equals("/login")
+            || path.equals("/logout") || path.equals("/actuator/health")
+            || path.equals("/api/v1/auth/me") || path.equals("/api/v1/auth/csrf")
+            || path.equals("/api/v1/auth/password");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!allowed && auth != null && auth.isAuthenticated()
+            && !(auth instanceof AnonymousAuthenticationToken)
+            && accounts.mustChangePassword(auth.getName())) {
+            res.setHeader("Cache-Control", "no-store");
+            if (path.startsWith("/api/")) {
+                res.setStatus(423);
+                res.setContentType("application/json;charset=UTF-8");
+                res.getWriter().write("{\"error\":\"password_change_required\"}");
+            } else {
+                res.sendRedirect("/login.html?change=1");
             }
+            return;
         }
-        chain.doFilter(request, response);
+        chain.doFilter(req, res);
     }
 }
