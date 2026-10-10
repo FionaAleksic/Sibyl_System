@@ -7,7 +7,7 @@ set -euo pipefail
 set +x
 umask 077
 
-VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.6}"
+VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.7}"
 [[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] ||
   { echo "Invalid Core release tag" >&2; exit 2; }
 [[ "${SIBYL_TARGET:-}" == cluster3-lab ]] || {
@@ -45,7 +45,7 @@ flock -n 9 || { echo "Another installer instance is running" >&2; exit 2; }
 tempdir="$(mktemp -d)"
 trap 'rm -rf "$tempdir"' EXIT
 
-echo "[1/8] Preflight host identities and permissions; no changes yet"
+echo "[1/9] Preflight host identities and permissions; no changes yet"
 [[ "$("${SSH[@]}" "$app" hostname)" == sibyl-app-lab ]] || exit 2
 [[ "$("${SSH[@]}" "$db" hostname)" == sibyl-db-lab ]] || exit 2
 [[ "$("${SSH[@]}" "$edge" hostname)" == sibyl-edge-lab ]] || exit 2
@@ -53,7 +53,7 @@ echo "[1/8] Preflight host identities and permissions; no changes yet"
 "${SSH[@]}" "$db" 'sudo -n true'
 "${SSH[@]}" "$edge" 'sudo -n true; systemctl is-active --quiet nginx'
 
-echo "[2/8] Verify GitHub release metadata and unique Core JAR digest"
+echo "[2/9] Verify GitHub release metadata and unique Core JAR digest"
 curl -fLsS --retry 2 --connect-timeout 12 --max-time 45 \
   "https://api.github.com/repos/FionaAleksic/Sibyl_System/releases/tags/v$VERSION" \
   -o "$tempdir/release.json"
@@ -73,7 +73,7 @@ PY
 [[ "$digest" =~ ^[a-f0-9]{64}$ ]] || exit 2
 echo "Release metadata and digest verified, v$VERSION"
 
-echo "[3/8] Stage Core JAR directly from GitHub on app; keep current service running"
+echo "[3/9] Stage Core JAR directly from GitHub on app; keep current service running"
 "${SSH[@]}" "$app" "sudo -n bash -c 'set -euo pipefail
   mkdir -p /opt/sibyl
   target=/opt/sibyl/sibyl-core-${VERSION}.jar
@@ -85,7 +85,7 @@ echo "[3/8] Stage Core JAR directly from GitHub on app; keep current service run
   install -o root -g root -m 0644 \"\$tmp\" \"\$target\"
   echo CORE_RELEASE_VERIFIED_AND_STAGED'"
 
-echo "[4/8] Acquire existing machine credential or generate on first install"
+echo "[4/9] Acquire existing machine credential or generate on first install"
 if [[ ! -e "$SECRET_FILE" ]]; then
   install -d -m 0700 "$(dirname "$SECRET_FILE")"
   (umask 077; openssl rand -hex 32 > "$SECRET_FILE")
@@ -96,24 +96,29 @@ fi
   echo "Refusing unexpected or unprotected secret file" >&2; exit 2;
 }
 
-echo "[5/8] Distribute credential only through APPROVED encrypted SSH transport"
+echo "[5/9] Distribute credential only through APPROVED encrypted SSH transport"
 # When policy rejects the transfer, stop. Do not substitute tunnels,
 # encoding tricks, alternate tools, or an insecure HTTP endpoint.
 "${SSH[@]}" "$app" 'sudo -n install -d -o root -g root -m 0700 /etc/sibyl'
 "${SSH[@]}" "$app" 'sudo -n install -o root -g root -m 0600 /dev/stdin /etc/sibyl/mysql-lab.password' \
   <"$SECRET_FILE"
 
-echo "[6/8] Configure DB account and TLS-bound MySQL for exactly this app VM"
+echo "[6/9] Configure DB account and TLS-bound MySQL for exactly this app VM"
 "${SCP[@]}" "$HERE/bootstrap-mysql-db.sh" "$db:/home/fiona/bootstrap-sibyl-mysql-db.sh"
 "${SSH[@]}" "$db" 'sudo -n bash /home/fiona/bootstrap-sibyl-mysql-db.sh' \
   <"$SECRET_FILE"
 
-echo "[7/8] Validate database and switch Core with automatic rollback"
+echo "[7/9] Validate database and switch Core with automatic rollback"
 "${SCP[@]}" "$HERE/activate-mysql-core.sh" "$app:/home/fiona/activate-sibyl-mysql-core.sh"
 "${SSH[@]}" "$app" "sudo -n env SIBYL_CORE_VERSION='$VERSION' SIBYL_CORE_SHA256='$digest' \
   bash /home/fiona/activate-sibyl-mysql-core.sh"
 
-echo "[8/8] Verify anonymous sees ONLY login; private pages and APIs are gated"
+echo "[8/9] Require HTTPS for all pages; remove legacy anonymous preview"
+"${SCP[@]}" "$HERE/enforce-https-login.sh" "$edge:/home/fiona/enforce-sibyl-https-login.sh"
+"${SSH[@]}" "$edge" 'sudo -n bash /home/fiona/enforce-sibyl-https-login.sh'
+
+echo "[9/9] Verify anonymous sees ONLY login; private pages and APIs are gated"
+test "$(curl --noproxy '*' -sS --max-time 8 -o /dev/null -w '%{http_code}' "http://$EDGE_IP/")" = 308
 curl -k -fsS --max-time 15 "https://$EDGE_IP/actuator/health" -o "$tempdir/health"
 test "$(curl -k -sS --max-time 15 -o /dev/null -w '%{http_code}' \
     "https://$EDGE_IP/login.html")" = 200
