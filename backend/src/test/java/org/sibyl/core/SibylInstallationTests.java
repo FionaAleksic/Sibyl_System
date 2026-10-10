@@ -59,7 +59,7 @@ class SibylInstallationTests {
         for(String p:new String[]{"/", "/index.html", "/admin.html", "/addons.html",
                     "/sibyl.js", "/sibyl.css", "/admin.js", "/addons.js"}) {
             mvc.perform(get(p)).andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login.html"));
+                .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/login.html")));
         }
         for(String p:new String[]{"/api/v1/addons/catalog", "/api/v1/settings/public",
                     "/api/v1/admin/users", "/api/v1/auth/me"}) {
@@ -75,7 +75,7 @@ class SibylInstallationTests {
             .andExpect(jsonPath("$.role",equalTo("ADMIN")))
             .andExpect(jsonPath("$.mustChangePassword",equalTo(true)));
         mvc.perform(get("/").session(adminSession)).andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/login.html?change=1"));
+            .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/login.html?change=1")));
         mvc.perform(get("/api/v1/admin/users").session(adminSession)).andExpect(status().isLocked());
         mvc.perform(post("/api/v1/auth/password").session(adminSession).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
@@ -105,7 +105,7 @@ class SibylInstallationTests {
         userSession=signIn("test.user",USER_PASSWORD);
         mvc.perform(get("/").session(userSession))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/login.html?change=1"));
+            .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/login.html?change=1")));
         mvc.perform(post("/api/v1/auth/password").session(userSession).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"currentPassword\":\""+USER_PASSWORD+"\",\"newPassword\":\"User-Replaced-Password-2026!\"}"))
