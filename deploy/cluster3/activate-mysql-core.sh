@@ -9,7 +9,7 @@ umask 077
   echo "Requires root on sibyl-app-lab only"; exit 1;
 }
 OLD=/opt/sibyl/sibyl-core-0.1.0-rc.1.jar
-VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.3}"
+VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.5}"
 NEW="/opt/sibyl/sibyl-core-${VERSION}.jar"
 CHECKSUM="${SIBYL_CORE_SHA256:-1c516b0f7ee541a0bdccb0e18f8ee72aa4be2fae2b02e4de0f6f1a68fcce01e0}"
 [[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] || exit 1
@@ -116,9 +116,10 @@ systemctl daemon-reload
 systemctl restart sibyl-core
 for attempt in $(seq 1 35); do
   if curl -fsS --max-time 3 http://172.22.120.241:8080/actuator/health >/dev/null &&
-     curl -fsS --max-time 3 http://172.22.120.241:8080/api/v1/settings/public | grep -q 'organization'; then
+     test "$(curl -sS --max-time 3 -o /dev/null -w '%{http_code}' \
+         http://172.22.120.241:8080/api/v1/settings/public)" = 401; then
     echo "MYSQL_CORE_RUNNING: v$VERSION"
-    echo "MySQL schema, admin and API started; login admin/friend must rotate on first use."
+    echo "MySQL ready; private settings correctly require authentication."
     echo "Previous version rollback files are in $BACKUP_DIR"
     exit 0
   fi
