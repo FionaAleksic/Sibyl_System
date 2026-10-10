@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Anmelden · Sibyl System</title>
+  <link rel="stylesheet" href="/login.css">
+  <script defer src="/login.js"></script>
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="heading">
+      <div class="brand"><span class="brand-mark">S</span><span>Sibyl System</span></div>
+      <div class="divider"></div>
+      <div id="sign-in">
+        <p class="eyebrow">Willkommen zurück</p>
+        <h1 id="heading">Anmelden</h1>
+        <p class="sub">Melden Sie sich an, um auf Ihre Arbeitsumgebung zuzugreifen.</p>
+        <form id="login-form">
+          <label for="username">Benutzername</label>
+          <input id="username" name="username" autocomplete="username" required autofocus>
+          <label for="password">Passwort</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+          <button type="submit" id="submit-login">Anmelden <span aria-hidden="true">→</span></button>
+        </form>
+      </div>
+      <div id="password-change" hidden>
+        <p class="eyebrow">Konto absichern</p>
+        <h1>Startpasswort ändern</h1>
+        <p class="sub">Ändern Sie Ihr einmaliges Passwort, bevor Sie Sibyl verwenden.</p>
+        <form id="change-form">
+          <label for="current-password">Bisheriges Passwort</label>
+          <input type="password" id="current-password" autocomplete="current-password" required>
+          <label for="new-password">Neues Passwort (mindestens 12 Zeichen)</label>
+          <input type="password" id="new-password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <label for="confirm-password">Passwort bestätigen</label>
+          <input type="password" id="confirm-password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <button type="submit">Neues Passwort speichern</button>
+        </form>
+      </div>
+      <p id="auth-message" role="status" aria-live="polite"></p>
+    </section>
+    <footer>Ihre Daten bleiben auf Ihrer Sibyl-Installation.</footer>
+  </main>
+</body>
+</html>
