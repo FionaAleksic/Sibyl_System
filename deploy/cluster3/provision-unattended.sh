@@ -7,7 +7,7 @@ set -euo pipefail
 set +x
 umask 077
 
-VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.4}"
+VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.5}"
 [[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] ||
   { echo "Invalid Core release tag" >&2; exit 2; }
 [[ "${SIBYL_TARGET:-}" == cluster3-lab ]] || {
@@ -113,19 +113,19 @@ echo "[7/8] Validate database and switch Core with automatic rollback"
 "${SSH[@]}" "$app" "sudo -n env SIBYL_CORE_VERSION='$VERSION' SIBYL_CORE_SHA256='$digest' \
   bash /home/fiona/activate-sibyl-mysql-core.sh"
 
-echo "[8/8] Run API smoke tests from independent management network"
+echo "[8/8] Verify anonymous sees ONLY login; private pages and APIs are gated"
 curl -k -fsS --max-time 15 "https://$EDGE_IP/actuator/health" -o "$tempdir/health"
-curl -k -fsS --max-time 15 "https://$EDGE_IP/api/v1/settings/public" -o "$tempdir/settings.json"
-curl -k -fsS --max-time 20 \
-  "https://$EDGE_IP/api/v1/addons/catalog?channel=prerelease" -o "$tempdir/catalog.json"
-python3 - "$tempdir/settings.json" "$tempdir/catalog.json" <<'PY'
-import json,sys
-settings=json.load(open(sys.argv[1]))
-catalog=json.load(open(sys.argv[2]))
-assert settings.get('organization'), 'Missing MySQL organization settings'
-ad=[a for a in catalog.get('addons',[]) if a.get('id')=='Sibyl.ad']
-assert len(ad)==1 and ad[0].get('status') in ('available','downloaded')
-print('MySQL-backed Sibyl Core, admin configuration and GitHub catalog are live.')
-PY
+test "$(curl -k -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+    "https://$EDGE_IP/login.html")" = 200
+for page in / /admin.html /addons.html /index.html; do
+  result="$(curl -k -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+      "https://$EDGE_IP$page")"
+  [[ "$result" == 302 ]] || { echo "Protected page $page returned $result, expected 302" >&2; exit 1; }
+done
+for api in /api/v1/auth/me /api/v1/settings/public /api/v1/addons/catalog; do
+  result="$(curl -k -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+      "https://$EDGE_IP$api")"
+  [[ "$result" == 401 ]] || { echo "Protected API $api returned $result, expected 401" >&2; exit 1; }
+done
 echo "CLUSTER3_SIBYL_CORE_DEPLOYMENT_SUCCEEDED"
-echo "Initial database Admin login: admin / friend. Rotate immediately on first login."
+echo "Anonymous pages and APIs protected; existing MySQL accounts were preserved."
