@@ -26,21 +26,8 @@
     </div>
     <div class="notice warning" role="status" id="catalog-notice">
       <strong>Repository-Katalog</strong>
-      <p>Suche und Release-Status sind verfügbar. Die Installation wird aktiviert, sobald Sibyl Core und die GitHub-Zugriffsberechtigung eingerichtet sind.</p>
+      <p>Nur angemeldete Administratoren können den Addon-Browser aufrufen. Addons stammen ausschließlich aus verifizierten GitHub-Releases.</p>
     </div>
-    <section class="panel" aria-label="Geschützte Administration" id="addon-auth" style="margin-bottom:15px">
-      <h2>Administrativer Download</h2>
-      <p class="muted small">GitHub-Releases sind für alle sichtbar. Herunterladen auf diesen Sibyl-Server dürfen nur angemeldete Administratoren über HTTPS.</p>
-      <form id="admin-login" class="toolbar" style="margin:0">
-        <label for="admin-name" class="small">Benutzername</label>
-        <input id="admin-name" name="username" type="text" autocomplete="username" class="search" style="max-width:200px" required>
-        <label for="admin-password" class="small">Passwort</label>
-        <input id="admin-password" name="password" type="password" autocomplete="current-password" class="search" style="max-width:200px" required>
-        <button class="button secondary" id="admin-connect" type="submit">Anmelden</button>
-        <button class="button ghost" id="admin-logout" type="button" hidden>Abmelden</button>
-      </form>
-      <div id="admin-auth-status" role="status" aria-live="polite" class="small muted"></div>
-    </section>
     <div class="toolbar">
       <label for="addon-search" class="small muted">Suchen</label>
       <input class="search" type="search" id="addon-search" placeholder="Addon-Name oder ID…" autocomplete="off">
