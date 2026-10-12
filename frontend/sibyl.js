@@ -65,6 +65,29 @@
           const a=document.createElement('a');a.href=path;a.textContent=label;nav.append(a);
         }
       }
+
+      // First-party module navigation is server-side verified; do not trust localStorage.
+      // Dependencies (such as AD) do not appear as user-facing tabs.
+      if(nav){
+        fetch('/api/v1/modules',{credentials:'same-origin',cache:'no-store'})
+          .then(r=>r.ok?r.json():Promise.reject(new Error('modules unavailable')))
+          .then(data=>{
+            for(const module of (Array.isArray(data.modules)?data.modules:[])){
+              if(module.type!=='feature'||!module.page||!module.id)continue;
+              if(nav.querySelector('a[data-module-id="'+module.id+'"]'))continue;
+              const link=document.createElement('a');
+              link.href=module.page;
+              link.dataset.moduleId=module.id;
+              link.textContent=module.name;
+              if(location.pathname==='/module.html'&&
+                 new URLSearchParams(location.search).get('id')===module.id)
+                link.setAttribute('aria-current','page');
+              const adminLink=nav.querySelector('a[href*="addons.html"]');
+              if(adminLink)nav.insertBefore(link,adminLink);
+              else nav.append(link);
+            }
+          }).catch(()=>{});
+      }
       const bar=document.querySelector('.topbar');
       if(bar&&!document.querySelector('[data-logout]')){
         const logout=document.createElement('button');

@@ -23,7 +23,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(registry -> registry
                 .requestMatchers("/api/v1/auth/csrf").permitAll()
                 .requestMatchers("/api/v1/admin/**", "/api/v1/addons/**").hasRole("ADMIN")
-                .requestMatchers("/api/v1/auth/**", "/api/v1/settings/public").authenticated()
+                .requestMatchers("/api/v1/auth/**", "/api/v1/settings/public", "/api/v1/modules", "/api/v1/modules/**").authenticated()
                 .anyRequest().denyAll())
             .exceptionHandling(errors -> errors
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

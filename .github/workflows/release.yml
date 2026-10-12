@@ -1,6 +1,8 @@
 name: Build & Publish Sibyl Core Release (MySQL)
 
 on:
+  push:
+    branches: [test]
   workflow_dispatch:
     inputs:
       version:
@@ -46,7 +48,7 @@ jobs:
     steps:
       - name: Validate release branch and version
         env:
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.7' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.8' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
           RELEASE_REF: ${{ github.ref_name }}
         run: |
@@ -73,6 +75,7 @@ jobs:
           node --check frontend/admin.js
           node --check frontend/sibyl.js
           node --check frontend/login.js
+          node --check frontend/module.js
           bash -n deploy/standard/install-ubuntu-2404.sh
           bash -n deploy/cluster3/provision-unattended.sh
           bash -n deploy/cluster3/bootstrap-mysql-db.sh
@@ -82,7 +85,7 @@ jobs:
           (cd backend && mvn --batch-mode --no-transfer-progress clean verify)
       - name: Create immutable versioned release artifacts
         env:
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.7' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.8' || inputs.version }}
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -97,7 +100,7 @@ jobs:
       - name: Publish prerelease or stable release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.7' || inputs.version }}
+          RELEASE_VERSION: ${{ github.event_name == 'push' && '0.1.0-rc.8' || inputs.version }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'prerelease' || inputs.channel }}
         run: |
           set -euo pipefail

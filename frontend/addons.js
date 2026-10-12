@@ -38,7 +38,7 @@ function render(){
     title.append(el('h3',a.name),el('div',a.id,'id'));
     head.append(title);card.append(head,el('p',a.description||'GitHub Addon','desc'));
     const chips=el('div',undefined,'chips');
-    const statuses={available:'GitHub-Release verfügbar',downloaded:'Von GitHub heruntergeladen',no_release:'Kein GitHub-Release',repository_unavailable:'Repository nicht erreichbar',error:'GitHub-API-Fehler'};
+    const statuses={available:'GitHub-Release verfügbar',downloaded:'Installiert (Adapter verfügbar, falls unterstützt)',no_release:'Kein GitHub-Release',repository_unavailable:'Repository nicht erreichbar',error:'GitHub-API-Fehler'};
     chips.append(el('span',statuses[a.status]||'Unbekannt','chip '+(a.status==='available'?'ready':'missing')));
     if(a.version)chips.append(el('span',a.version,'chip'));
     card.append(chips);
@@ -111,7 +111,7 @@ async function download(addon,button){
       throw new Error(info);
     }
     const result=await response.json();
-    statusText.textContent=addon.id+' '+result.version+': GitHub-Paket erfolgreich heruntergeladen und geprüft. Aktivierung des Addons ist noch nicht implementiert.';
+    statusText.textContent=addon.id+' '+result.version+': GitHub-Paket erfolgreich heruntergeladen und geprüft. Verfügbare Funktionen erscheinen in der Hauptnavigation, sofern ein Core-Adapter vorhanden ist.';
     await load();
   }catch(error){
     statusText.textContent='Download fehlgeschlagen: '+error.message;
