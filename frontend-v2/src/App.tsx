@@ -75,7 +75,7 @@ export default function App() {
     <div className="workspace">
       <header className="topbar"><div><strong>Sibyl</strong><span className="separator"> / </span>
         <span className="secondary">{selected?.name || (section === "admin" ? "Administration" : "Übersicht")}</span></div>
-        <span className="environment-tag">LAB · Cluster 3</span>
+        <span className="environment-tag">{import.meta.env.VITE_SIBYL_ENV_LABEL || "Vorschau"}</span>
       </header>
       <main className="content">
         {section === "admin" ? <>
