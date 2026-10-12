@@ -61,3 +61,14 @@ Die `AddonDeploymentService`-Schnittstelle führt explizite `publish-ui`-Operati
 UI-Assets werden **nicht** mit privilegierten Shell-Befehlen kopiert, sondern aus der durch SHA-256 verifizierten Release-Datei über einen authentifizierten, CSP-sandboxed URL-Namespace ausgeliefert. Die installierte UI kann keine Core-Cookies lesen und kein API-Request mit Core-Rechten ausführen. Der Browser erhält die Navigationslinks aus `GET /api/v1/extensions`, nicht aus hardcodierten Produktlisten.
 
 **Phase-1-Grenze:** Module mit eigenen SQL-Migrationen, API-Endpunkten oder Hintergrundservices bleiben bis zum isolierten Runner inaktiv bzw. müssen bestehende Core-Kompatibilitätsadapter nutzen. Für echte beliebige Addons ist dies ein sicherer Einstieg, noch keine vollständige allgemeine Runtime.
+
+## Testversionen der Addons (Stand 12.10.2026)
+- `Sibyl.ad v0.1.0-rc.3`: `kind=dependency`, keine Navigation
+- `Sibyl.inventory v0.1.0-rc.2`: eigener UI-Deploy-Plan; benötigt AD RC.3
+- `Sibyl.planning v0.1.0-rc.2`: eigener UI-Deploy-Plan; benötigt AD RC.3
+- `Sibyl.doc v0.1.0-rc.2`: eigener UI-Deploy-Plan ohne AD
+- `Sibyl.report-book v0.1.0-rc.2`: eigener UI-Deploy-Plan ohne AD
+
+Aktuelle Releases sind eigenständige Beispiele für eine sichere statische UI-Installation. Alle Backend-Features, die echten AD-/MySQL-Zugriff benötigen, erfordern die folgende Worker-Phase. Insbesondere sind Inventar- und Planungsdaten vorerst Eingabedaten, und Dokumentation/Berichtsheft speichern noch nicht dauerhaft.
+
+**Diese Core-Version wird als v0.1.0-rc.10 gebaut.** Ältere ZIP-Releases ohne `deployment.json` bleiben Downloads, nicht aktivierbare Deploy-Pakete nach Contract v1.

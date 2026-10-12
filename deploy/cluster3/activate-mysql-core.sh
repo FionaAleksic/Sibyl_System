@@ -9,7 +9,7 @@ umask 077
   echo "Requires root on sibyl-app-lab only"; exit 1;
 }
 OLD=/opt/sibyl/sibyl-core-0.1.0-rc.1.jar
-VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.8}"
+VERSION="${SIBYL_CORE_VERSION:-0.1.0-rc.10}"
 NEW="/opt/sibyl/sibyl-core-${VERSION}.jar"
 CHECKSUM="${SIBYL_CORE_SHA256:-1c516b0f7ee541a0bdccb0e18f8ee72aa4be2fae2b02e4de0f6f1a68fcce01e0}"
 [[ "$VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?$ ]] || exit 1
