@@ -69,19 +69,31 @@ public record AddonDeploymentPlan(
         Set<String> entries = new HashSet<>();
         for (JsonNode operation : root.path("operations")) {
             String type=operation.path("type").asText();
-            if (!"publish-ui".equals(type))
+            if (!Set.of("publish-ui","migrate-db","register-worker").contains(type))
                 throw new IllegalArgumentException("Unsupported install operation: " + type);
             String path=operation.path("path").asText();
             String label=operation.path("label").asText();
-            if (kind.equals("dependency") || !validResource(path) || !path.endsWith(".html")
-                || label.isBlank() || label.length()>48 || !entries.add(path)
-                || zip.getEntry(path)==null)
+            if (!entries.add(type+":"+path) || zip.getEntry(path)==null
+                || zip.getEntry(path).isDirectory())
+                throw new IllegalArgumentException("Missing or duplicate install artifact");
+            if (type.equals("publish-ui") && (kind.equals("dependency")
+                || !validResource(path) || !path.endsWith(".html")
+                || label.isBlank() || label.length()>48))
                 throw new IllegalArgumentException("Invalid UI publication operation");
+            if (type.equals("migrate-db") && (!path.matches("migrations/V[0-9]{3,6}__[A-Za-z0-9_-]{1,80}\\.sql")
+                || !label.isBlank()))
+                throw new IllegalArgumentException("Invalid database migration declaration");
+            if (type.equals("register-worker") && (!path.matches("backend/[A-Za-z0-9_-]{1,80}\\.jar")
+                || !label.isBlank()))
+                throw new IllegalArgumentException("Invalid worker artifact declaration");
+            if (type.equals("register-worker") && operations.stream()
+                .anyMatch(o->o.type().equals("register-worker")))
+                throw new IllegalArgumentException("Only one worker per addon version");
             operations.add(new Operation(type,path,label));
         }
-        if (kind.equals("feature") && operations.size()!=1)
+        if (kind.equals("feature") && operations.stream().filter(o->o.type().equals("publish-ui")).count()!=1)
             throw new IllegalArgumentException("Feature addon needs exactly one UI entry");
-        if (kind.equals("dependency") && !operations.isEmpty())
+        if (kind.equals("dependency") && operations.stream().anyMatch(o->o.type().equals("publish-ui")))
             throw new IllegalArgumentException("Dependency is not a navigation feature");
         return new AddonDeploymentPlan(expectedId,expectedVersion,kind,deps,operations);
     }
