@@ -26,6 +26,12 @@
       "repo": "FionaAleksic/Sibyl.doc",
       "name": "Dokumentation",
       "type": "feature"
+    },
+    {
+      "id": "Sibyl.report-book",
+      "repo": "FionaAleksic/Sibyl.report-book",
+      "name": "Berichtsheft",
+      "type": "feature"
     }
   ]
 }
