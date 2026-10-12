@@ -16,3 +16,7 @@ Core interpretiert Addon-operationen generisch (keine Addon-IDs im Handler):
 - `register-worker`: Java 21 JAR aus `backend/*.jar` mit Main-Class; getrennte JVM in zwingender `bubblewrap`-Sandbox mit `--unshare-all`; kein Core-Secret, kein eigenes Netzwerk, begrenzter RAM, AF_UNIX-Framing, 5s Deadline
 
 Runtime muss **explizit mit einem sicheren Linux-Host getestet werden**. Es ist kein Produktionsversprechen: bwrap ist auf dem aktuellen Cluster-3-Appserver nicht installiert, deswegen startet ohne Provisioning kein Worker. Zudem fehlen noch cgroup/SECCOMP-Profil, Live-AD-Integration und scoped DB-Capability-Broker für Daten-Persistenz aus Worker-Code. SQL-DDL ist nicht generell rollbackfähig, deshalb require vorgängiges DB-Backup und operatorseitige Wiederherstellung von gescheiterten Migrationen.
+
+## RC.12 Safety Gate
+
+**Worker sandbox/health must pass before any addon MySQL DDL is attempted.** If `bubblewrap` is absent or a worker cannot respond to `ping`, the installation aborts without creating addon tables. The Core MySQL transaction also registers after-completion cleanup of a newly started worker if the installation record cannot be committed. Successfully applied DDL still requires explicit operator recovery if a later database action fails.

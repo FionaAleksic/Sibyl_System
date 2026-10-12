@@ -145,16 +145,25 @@ public class AddonDeploymentService {
         // MySQL DDL is not transactional. Incomplete migrations are marked STARTED
         // in the dedicated addon schema and require operator recovery.
         try {
-            migrator.apply(id,release.path(),plan.operations());
+            // Check sandbox and executable worker BEFORE any MySQL DDL.
+            // DDL cannot be rolled back if a later worker health check fails.
             for(AddonDeploymentPlan.Operation op:plan.operations()){
                 if ("register-worker".equals(op.type()))
                     workers.health(id,release.path(),op.path());
             }
+            migrator.apply(id,release.path(),plan.operations());
         } catch (Exception ex) {
             workers.deactivate(id);
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Addon deployment failed; check worker sandbox and scoped DB migration prerequisites");
         }
+        // A failed DB commit must not leave an active, unregistered worker.
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override public void afterCompletion(int status) {
+                    if(status!=STATUS_COMMITTED) workers.deactivate(id);
+                }
+            });
         if(existing.isEmpty())
             jdbc.update("""
                 INSERT INTO sibyl_addon_installs
