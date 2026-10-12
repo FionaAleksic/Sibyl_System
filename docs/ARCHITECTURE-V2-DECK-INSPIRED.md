@@ -90,3 +90,16 @@ Die neue `CapabilityRegistry` im Code ist zunächst **nur ein in-memory, read-on
 5. Kurs-, Such-, Netzwerk-, Berichtsheft- und AD-Provider in kleinen einzeln testbaren Releases.
 6. Vor Produktivfreigabe echte DMZ, Backup-Restore, E2E, Security-Gates und Ausbilderabnahme.
 
+
+
+## Korrektur der Bereitstellungsart (12.10.2026, 15:54 UTC)
+
+**Verbindliche Betreiberanweisung: Keine VMs klonen.** Beide Sibyl-V2-VMs sollen über `qm create` auf dem Cluster 3 **neu angelegt** und mit einer **frisch importierten Betriebssystem-Image-Systemplatte** initialisiert werden. Cloud-init darf für Netz, SSH-Public-Key und Benutzerzugang verwendet werden, **nicht** als VM-Klon.
+
+**Nachgewiesener Ist-Stand:**
+- VM203 (`sibyl-frontend-v2`, .243) wurde vor dieser Korrektur aus VM9500 geklont, gestartet und mit Nginx eingerichtet. **Entspricht nicht mehr der Vorgabe und ist zu ersetzen.** Nicht als fertig neu installierte VM deklarieren. Sie bleibt bis zur sicher verifizierten Ersetzung erhalten, damit keine unbeabsichtigten Ausfälle entstehen.
+- VM204 (`sibyl-backend-v2`, .244) wurde **neu mit `qm create`** auf `NL1337-PVE-maeb` angelegt, 4 vCPU, 8 GiB RAM, virtio-Netz auf vmbr0, Cloud-init-Netzadresse .244/24 und DNS .202, SSH-Public-Key. **Keine Festplatte, kein Betriebssystem, gestoppt**: der anschließende `qm importdisk` aus dem offiziellen Ubuntu 24.04 Cloud-Image wurde durch den Remote-Sicherheitscheck geblockt. Als Schutz steht `onboot=0`. Keine alternative Remote-Methode zum Umgehen der Sperre verwenden.
+- Die vorhandene Installationsquelle auf dem Cluster-3-Node `NL1337-PVE-maeb` ist `/var/lib/vz/template/iso/sibyl-ubuntu-noble-cloud.img`, SHA-256 `6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2`, in früheren Arbeiten anhand Canonical SHA256SUMS verifiziert und heute erneut lokal gehasht. Wird als Image (nicht als VM-/Template-Datenträger) verwendet.
+- Ceph HEALTH_OK nach Kontrolle, andere VM200–202 nicht verändert. Das Netzwerk ist weiterhin keine echte DMZ.
+
+**Nächster administrativer Schritt:** Über einen ausdrücklich freigegebenen Proxmox-Administrationsweg die OS-Image-Systemplatte für VM204 bereitstellen, 50 GiB dimensionieren, Cloud-init-CD anlegen und danach booten. Erst wenn VM204 zugänglich ist, VM203 kontrolliert außer Betrieb setzen und vollständig durch eine ebenfalls via `qm create` und Image-Import neu erstellte VM gleichen Zwecks/IP ersetzen. Vorher aktuelle Konfiguration dokumentieren und sicherstellen, dass im Betrieb nur eine VM die IP .243 verwendet. Keine Datenmigration/Produktivumschaltung ohne eigene Tests.
