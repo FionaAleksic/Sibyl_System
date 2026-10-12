@@ -77,9 +77,8 @@ public class AddonDeploymentService {
         try(ZipFile zip=new ZipFile(path.toFile())) {
             AddonDeploymentPlan plan=AddonDeploymentPlan.read(zip,mapper,
                 id,tag.substring(1));
-            if (!Objects.equals(addon.type(), "integration")
-                && !Objects.equals(addon.type(), plan.kind())
-                && !("feature".equals(addon.type()) && "feature".equals(plan.kind())))
+            if (!(("integration".equals(addon.type()) && "dependency".equals(plan.kind()))
+                || ("feature".equals(addon.type()) && "feature".equals(plan.kind()))))
                 throw new IllegalArgumentException("Addon category mismatch");
             return new Verified(plan,sha,path);
         }
@@ -150,6 +149,13 @@ public class AddonDeploymentService {
                     archive_sha256=?,nav_label=?,nav_entry=?,updated_at=CURRENT_TIMESTAMP(6)
                 WHERE addon_id=?
                 """,release.digest(),navLabel,navEntry,id);
+        jdbc.update("DELETE FROM sibyl_addon_install_dependencies WHERE addon_id=?",id);
+        for(AddonDeploymentPlan.Dependency required:plan.dependencies()) {
+            jdbc.update("""
+                INSERT INTO sibyl_addon_install_dependencies
+                    (addon_id,requires_id,requires_version) VALUES (?,?,?)
+                """,id,required.id(),required.version());
+        }
         jdbc.update("INSERT INTO sibyl_audit_events (actor,action) VALUES (?,?)",
             actor.getName(),"addon-deployment-installed:"+id);
         return Map.of("id",id,"version",plan.version(),"state","registered",
@@ -160,6 +166,14 @@ public class AddonDeploymentService {
     public Map<String,String> deactivate(Principal actor,String id) {
         if(!AddonDeploymentPlan.validId(id))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        Integer consumers=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM sibyl_addon_install_dependencies AS d
+            JOIN sibyl_addon_installs AS a ON a.addon_id=d.addon_id AND a.active=1
+            WHERE d.requires_id=?
+            """,Integer.class,id);
+        if(consumers!=null && consumers>0)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Cannot deactivate an addon required by another active addon");
         int rows=jdbc.update("UPDATE sibyl_addon_installs SET active=0 WHERE addon_id=? AND active=1",id);
         if(rows!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         jdbc.update("INSERT INTO sibyl_audit_events (actor,action) VALUES (?,?)",

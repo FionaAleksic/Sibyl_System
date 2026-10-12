@@ -38,7 +38,7 @@ function render(){
     title.append(el('h3',a.name),el('div',a.id,'id'));
     head.append(title);card.append(head,el('p',a.description||'GitHub Addon','desc'));
     const chips=el('div',undefined,'chips');
-    const statuses={available:'GitHub-Release verfügbar',downloaded:'Installiert (Adapter verfügbar, falls unterstützt)',no_release:'Kein GitHub-Release',repository_unavailable:'Repository nicht erreichbar',error:'GitHub-API-Fehler'};
+    const statuses={available:'GitHub-Release verfügbar',downloaded:'Heruntergeladen – Installationsplan prüfen',no_release:'Kein GitHub-Release',repository_unavailable:'Repository nicht erreichbar',error:'GitHub-API-Fehler'};
     chips.append(el('span',statuses[a.status]||'Unbekannt','chip '+(a.status==='available'?'ready':'missing')));
     if(a.version)chips.append(el('span',a.version,'chip'));
     card.append(chips);
@@ -55,7 +55,14 @@ function render(){
     button.title=!secure?'HTTPS erforderlich':!canDownload?'Adminanmeldung erforderlich':
       a.status!=='available'?'Kein installierbarer Release für den Kanal':'Veröffentlichtes GitHub ZIP abrufen und prüfen';
     button.addEventListener('click',()=>download(a,button));
-    foot.append(button);card.append(foot);body.append(card);
+    foot.append(button);
+    if(a.status==='downloaded'){
+      const install=el('button','Installieren','button secondary');
+      install.type='button';install.disabled=busy||!secure||!canDownload;
+      install.addEventListener('click',()=>activate(a));
+      foot.append(install);
+    }
+    card.append(foot);body.append(card);
   }
   if(!view.length)body.append(el('div','Keine passenden Addons gefunden.','empty'));
 }
@@ -117,6 +124,38 @@ async function download(addon,button){
     statusText.textContent='Download fehlgeschlagen: '+error.message;
   }finally{busy=false;render();}
 }
+
+async function activate(addon){
+  if(!secure||!live||busy||!canDownload||addon.status!=='downloaded')return;
+  busy=true;render();
+  try{
+    const planResponse=await fetch('/api/v1/admin/extensions/'+encodeURIComponent(addon.id)+'/plan?'+
+       new URLSearchParams({releaseTag:addon.tag,channel:channel.value}),
+       {credentials:'same-origin',cache:'no-store'});
+    if(!planResponse.ok)throw new Error('Installationsplan HTTP '+planResponse.status+
+      ' (für ältere Addons bitte ein Release mit deployment.json laden)');
+    const plan=await planResponse.json();
+    const details=plan.operations.map(op=>op.type+': '+op.path).join('\n')||'Nur Dependency-Registrierung';
+    const deps=plan.dependencies.map(d=>d.id+' '+d.version).join(', ')||'Keine';
+    if(!confirm('Addon '+addon.id+' '+plan.version+' installieren?\n\nOperationen:\n'+
+      details+'\nAbhängigkeiten: '+deps+'\n\nUnbekannte Aktionen werden nicht ausgeführt.'))return;
+    const csrfResponse=await fetch('/api/v1/auth/csrf',{credentials:'same-origin',cache:'no-store'});
+    if(!csrfResponse.ok)throw Error('CSRF HTTP '+csrfResponse.status);
+    const csrf=await csrfResponse.json();
+    const res=await fetch('/api/v1/admin/extensions/'+encodeURIComponent(addon.id)+'/install',{
+      method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json',[csrf.header]:csrf.token},
+      body:JSON.stringify({channel:channel.value,releaseTag:addon.tag})
+    });
+    if(!res.ok)throw Error('Installation HTTP '+res.status+
+      (res.status===409?' (Version/Dependency/Konflikt)':''));
+    const result=await res.json();
+    statusText.textContent=addon.id+' '+result.version+': '+result.state+
+      '. Neue Funktionsmodule erscheinen nach Neuladen im Hauptmenü.';
+  }catch(ex){statusText.textContent='Installation fehlgeschlagen: '+ex.message;}
+  finally{busy=false;render();}
+}
+
 if(!secure){
   canDownload=false;
   statusText.textContent='HTTPS erforderlich.';

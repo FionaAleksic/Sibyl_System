@@ -44,8 +44,8 @@ public final class AddonController {
             item.put("description", "GitHub: " + addon.repo());
             item.put("type", addon.type());
             try {
-                boolean downloaded = releases.isDownloaded(addon);
                 GitHubReleaseService.ReleaseInfo release = releases.latest(addon, channel);
+                boolean downloaded = release!=null && releases.isDownloaded(addon,release.tag());
                 String status = release == null || release.asset() == null ||
                     !release.digest().matches("sha256:[a-fA-F0-9]{64}") ? "no_release" :
                     downloaded ? "downloaded" : "available";

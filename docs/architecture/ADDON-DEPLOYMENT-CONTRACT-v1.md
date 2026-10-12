@@ -54,3 +54,10 @@ Spätere Version des SDK definiert weitere Operationen:
 7. Updates versionieren, nie zwei aktive Versionen mit gleicher ID.
 
 **Kein produktiver Rollout ohne echte Datenbank-, Browser-, Auth- und Rollbacktests.**
+
+## Implementierter generischer Phase-1-Interpreter (Core test)
+Die `AddonDeploymentService`-Schnittstelle führt explizite `publish-ui`-Operationen aus Addon-ZIPs aus und speichert atomar eine aktive Version je ID in MySQL. Abhängigkeiten werden registriert und eine deaktivierte Dependency kann nicht bei aktiven abhängigen Modulen abgeschaltet werden. Keine addon-spezifischen `if/else` in diesem Installationspfad.
+
+UI-Assets werden **nicht** mit privilegierten Shell-Befehlen kopiert, sondern aus der durch SHA-256 verifizierten Release-Datei über einen authentifizierten, CSP-sandboxed URL-Namespace ausgeliefert. Die installierte UI kann keine Core-Cookies lesen und kein API-Request mit Core-Rechten ausführen. Der Browser erhält die Navigationslinks aus `GET /api/v1/extensions`, nicht aus hardcodierten Produktlisten.
+
+**Phase-1-Grenze:** Module mit eigenen SQL-Migrationen, API-Endpunkten oder Hintergrundservices bleiben bis zum isolierten Runner inaktiv bzw. müssen bestehende Core-Kompatibilitätsadapter nutzen. Für echte beliebige Addons ist dies ein sicherer Einstieg, noch keine vollständige allgemeine Runtime.

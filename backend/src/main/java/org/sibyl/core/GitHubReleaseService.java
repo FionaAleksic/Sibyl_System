@@ -120,6 +120,11 @@ public class GitHubReleaseService {
                 release.path("body").asText(""), found, digest);
     }
 
+    public boolean isDownloaded(AddonCatalog.Addon addon, String tag) throws IOException {
+        if (tag == null || !tag.matches("v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?")) return false;
+        return Files.isRegularFile(root.resolve(addon.id()).resolve(tag+".zip"));
+    }
+
     public boolean isDownloaded(AddonCatalog.Addon addon) throws IOException {
         Path dir = root.resolve(addon.id());
         if (!Files.isDirectory(dir)) return false;
@@ -159,7 +164,8 @@ public class GitHubReleaseService {
         }
         if (release.asset().path("size").asLong(Long.MAX_VALUE) > MAX_DOWNLOAD)
             throw new IllegalStateException("Release ZIP exceeds size limit");
-        if (isDownloaded(addon)) throw new IllegalStateException("This add-on already has one downloaded version");
+        if (isDownloaded(addon, expectedTag))
+            throw new IllegalStateException("This exact add-on release is already downloaded");
 
         Path dir = root.resolve(addon.id());
         Files.createDirectories(dir);
