@@ -1,0 +1,40 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sibyl · Addon</title><link rel="stylesheet" href="/sibyl.css"><script defer src="/sibyl.js"></script>
+<style>main{max-width:1200px;margin:auto;padding:24px}iframe{border:1px solid var(--border,#888);height:75vh;min-height:450px;width:100%;background:var(--surface,#fff)}.muted{opacity:.72}</style>
+</head><body><header class="topbar"><a class="brand" href="/"><span class="mark">S</span><span data-sibyl-brand>Sibyl System</span></a>
+<nav class="module-nav"><a href="/">Startseite</a></nav><div class="grow"></div>
+<button class="theme-toggle" data-theme-toggle>Darstellung: System</button></header>
+<main><h1 id="title">Erweiterung</h1><p id="status" role="status" class="muted">Paket wird überprüft …</p><iframe id="addon" sandbox="allow-scripts" title="Isolierte Sibyl Erweiterung" referrerpolicy="no-referrer"></iframe></main>
+<script>
+'use strict';
+(async()=>{
+ const id=new URLSearchParams(location.search).get('id');
+ if(!/^Sibyl\.[a-z][a-z0-9-]{0,62}$/.test(id||''))throw Error('Ungültige Addon-ID');
+ const resp=await fetch('/api/v1/extensions',{credentials:'same-origin',cache:'no-store'});
+ if(!resp.ok)throw Error('Keine authentifizierte Modulliste');
+ const data=await resp.json(),addon=data.modules.find(x=>x.id===id&&x.type==='feature');
+ if(!addon)throw Error('Addon nicht aktiviert');
+ document.getElementById('title').textContent=addon.name;
+ document.getElementById('status').textContent='Sandboxed Addon · '+addon.version;
+ const frame=document.getElementById('addon');
+ frame.src='/extensions/'+encodeURIComponent(id)+'/ui/index.html';
+ window.addEventListener('message',async event=>{
+  if(event.source!==frame.contentWindow||event.origin!=='null')return;
+  const msg=event.data;
+  if(!msg||msg.sibyl!=='invoke'||!Number.isSafeInteger(msg.requestId)
+    ||!/[a-z][a-zA-Z0-9_-]{0,63}/.test(msg.method||'')
+    ||JSON.stringify(msg.payload||{}).length>60000)return;
+  try{
+   const csrf=await fetch('/api/v1/auth/csrf',{credentials:'same-origin'}).then(r=>{
+    if(!r.ok)throw Error('CSRF fehlgeschlagen');return r.json();});
+   const response=await fetch('/api/v1/ext/'+encodeURIComponent(id)+'/invoke/'+encodeURIComponent(msg.method),{
+    method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',
+      [csrf.header]:csrf.token},body:JSON.stringify(msg.payload||{})});
+   if(!response.ok)throw Error('HTTP '+response.status);
+   frame.contentWindow.postMessage({sibyl:'response',requestId:msg.requestId,
+       data:await response.json()},'*');
+  }catch(e){frame.contentWindow.postMessage({sibyl:'response',requestId:msg.requestId,
+       error:String(e.message).slice(0,200)},'*');}
+ });
+})().catch(e=>{document.getElementById('status').textContent='Fehler: '+e.message});
+</script></body></html>

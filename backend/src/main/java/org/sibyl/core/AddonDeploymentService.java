@@ -231,7 +231,7 @@ public class AddonDeploymentService {
             String label=(String)row.get("nav_label");
             active.add(Map.of("id",id,"version",version,"type",kind,
                 "name",label.isBlank()?id:label,"page",
-                "feature".equals(kind) ? "/extensions/"+id+"/"+entry : "",
+                "feature".equals(kind) ? "/extension-host.html?id="+id : "",
                 "state","registered"));
         }
         return List.copyOf(active);
