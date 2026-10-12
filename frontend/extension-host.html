@@ -21,6 +21,36 @@
  window.addEventListener('message',async event=>{
   if(event.source!==frame.contentWindow||event.origin!=='null')return;
   const msg=event.data;
+  // Shared, owner-scoped record API for installed addons; no raw SQL or shared data.
+  if(msg && msg.sibyl==='records' && Number.isSafeInteger(msg.requestId)){
+   const op=msg.op;
+   if(!['list','get','create','update','archive','history'].includes(op)
+      || !/^[a-z][a-z0-9-]{0,48}$/.test(msg.collection||'')
+      || (['get','update','archive','history'].includes(op) &&
+          !/^[0-9a-f-]{36}$/.test(msg.id||'')))return;
+   const path='/api/v1/ext/'+encodeURIComponent(id)+'/records/'+
+      encodeURIComponent(msg.collection)+
+      (['get','update','archive','history'].includes(op)?'/'+encodeURIComponent(msg.id):'')+
+      (op==='history'?'/history':'')+
+      (op==='archive'?'?expectedVersion='+encodeURIComponent(msg.expectedVersion):'');
+   const verb=op==='create'?'POST':op==='update'?'PUT':op==='archive'?'DELETE':'GET';
+   try{
+    const payload=op==='create'?msg.value:op==='update'?
+        {expectedVersion:msg.expectedVersion,value:msg.value}:undefined;
+    if(payload!==undefined && JSON.stringify(payload).length>120000)
+      throw Error('Datensatz zu groß');
+    const csrf=verb==='GET'?null:await fetch('/api/v1/auth/csrf',
+      {credentials:'same-origin'}).then(r=>{if(!r.ok)throw Error('CSRF nicht verfügbar');return r.json()});
+    const headers=csrf?{'Content-Type':'application/json',[csrf.header]:csrf.token}:{};
+    const r=await fetch(path,{method:verb,credentials:'same-origin',cache:'no-store',
+      headers,...(payload===undefined?{}:{body:JSON.stringify(payload)})});
+    if(!r.ok)throw Error('Speichern fehlgeschlagen (HTTP '+r.status+')');
+    frame.contentWindow.postMessage({sibyl:'records-response',
+      requestId:msg.requestId,data:await r.json()},'*');
+   }catch(ex){frame.contentWindow.postMessage({sibyl:'records-response',
+       requestId:msg.requestId,error:String(ex.message).slice(0,220)},'*');}
+   return;
+  }
   if(!msg||msg.sibyl!=='invoke'||!Number.isSafeInteger(msg.requestId)
     ||!/^([a-z][a-zA-Z0-9_-]{0,63})$/.test(msg.method||'')
     ||JSON.stringify(msg.payload||{}).length>60000)return;
