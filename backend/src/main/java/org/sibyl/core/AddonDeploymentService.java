@@ -31,12 +31,16 @@ public class AddonDeploymentService {
     private final AddonCatalog catalog;
     private final GitHubReleaseService releases;
     private final JdbcTemplate jdbc;
+    private final AddonMigrationRunner migrator;
+    private final AddonWorkerRuntime workers;
     private final Path root = Path.of(System.getenv().getOrDefault(
         "SIBYL_ADDON_DATA", "/var/lib/sibyl/addons")).toAbsolutePath().normalize();
 
     public AddonDeploymentService(ObjectMapper mapper, AddonCatalog catalog,
-                                  GitHubReleaseService releases, JdbcTemplate jdbc) {
+                                  GitHubReleaseService releases, JdbcTemplate jdbc,
+                                  AddonMigrationRunner migrator,AddonWorkerRuntime workers) {
         this.mapper=mapper;this.catalog=catalog;this.releases=releases;this.jdbc=jdbc;
+        this.migrator=migrator;this.workers=workers;
     }
 
     private record Verified(AddonDeploymentPlan plan, String digest, Path path) {}
@@ -132,10 +136,24 @@ public class AddonDeploymentService {
         for(AddonDeploymentPlan.Operation op:plan.operations()) {
             if ("publish-ui".equals(op.type())) {
                 navLabel=op.label();navEntry=op.path();
-            } else {
+            } else if (!"migrate-db".equals(op.type())
+                && !"register-worker".equals(op.type())) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "Unsupported operation: "+op.type());
             }
+        }
+        // MySQL DDL is not transactional. Incomplete migrations are marked STARTED
+        // in the dedicated addon schema and require operator recovery.
+        try {
+            migrator.apply(id,release.path(),plan.operations());
+            for(AddonDeploymentPlan.Operation op:plan.operations()){
+                if ("register-worker".equals(op.type()))
+                    workers.health(id,release.path(),op.path());
+            }
+        } catch (Exception ex) {
+            workers.deactivate(id);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Addon deployment failed; check worker sandbox and scoped DB migration prerequisites");
         }
         if(existing.isEmpty())
             jdbc.update("""
@@ -159,7 +177,7 @@ public class AddonDeploymentService {
         jdbc.update("INSERT INTO sibyl_audit_events (actor,action) VALUES (?,?)",
             actor.getName(),"addon-deployment-installed:"+id);
         return Map.of("id",id,"version",plan.version(),"state","registered",
-            "note","Addon-owned declarative UI deployment complete; external service hooks not supported in SDK v1");
+            "note","Addon-owned deploy operations completed; backend worker isolated");
     }
 
     @Transactional
@@ -178,6 +196,7 @@ public class AddonDeploymentService {
         if(rows!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         jdbc.update("INSERT INTO sibyl_audit_events (actor,action) VALUES (?,?)",
             actor.getName(),"addon-deployment-deactivated:"+id);
+        workers.deactivate(id);
         return Map.of("id",id,"state","inactive","data","preserved");
     }
 
@@ -216,6 +235,36 @@ public class AddonDeploymentService {
                 "state","registered"));
         }
         return List.copyOf(active);
+    }
+
+    /** Authenticated generic API forwarding; no addon-specific code paths. */
+    public com.fasterxml.jackson.databind.JsonNode invoke(String id,String method,
+                       com.fasterxml.jackson.databind.JsonNode body) {
+        if(!AddonDeploymentPlan.validId(id))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        List<Map<String,Object>> rows=jdbc.queryForList("""
+            SELECT version,archive_sha256 FROM sibyl_addon_installs
+            WHERE addon_id=? AND active=1
+            """,id);
+        if(rows.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        String version=(String)rows.get(0).get("version");
+        String sha=(String)rows.get(0).get("archive_sha256");
+        if(!stillVerified(id,version,sha))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Addon release altered");
+        Path path=installedArchive(id,version);
+        try (ZipFile zip=new ZipFile(path.toFile())) {
+            AddonDeploymentPlan deployment=AddonDeploymentPlan.read(zip,mapper,id,version);
+            var worker=deployment.operations().stream()
+                .filter(op->"register-worker".equals(op.type())).findFirst();
+            if(worker.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED,
+                "This addon has no backend worker");
+            return workers.call(id,path,worker.get().path(),method,body);
+        } catch(ResponseStatusException ex){throw ex;}
+        catch(IllegalArgumentException ex){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,ex.getMessage());
+        } catch(Exception ex){
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Addon backend unavailable or sandbox not configured");
+        }
     }
 
     public record Asset(byte[] bytes,String type) {}

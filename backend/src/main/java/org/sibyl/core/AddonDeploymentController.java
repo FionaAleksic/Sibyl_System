@@ -1,6 +1,7 @@
 package org.sibyl.core;
 
 import java.security.Principal;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.CacheControl;
@@ -37,9 +38,14 @@ public final class AddonDeploymentController {
     public Map<String,String> deactivate(@PathVariable String id,Principal actor) {
         return deploy.deactivate(actor,id);
     }
+    @PostMapping("/api/v1/ext/{id}/invoke/{method}")
+    public JsonNode invoke(@PathVariable String id,@PathVariable String method,
+                           @RequestBody JsonNode payload) {
+        return deploy.invoke(id,method,payload);
+    }
     @GetMapping("/api/v1/extensions")
     public Map<String,Object> active() {
-        return Map.of("modules",deploy.active(),"runtime","addon-deployment-contract-v1");
+        return Map.of("modules",deploy.active(),"runtime","addon-deployment-contract-v2");
     }
     @GetMapping("/extensions/{id}/ui/{filename:.+}")
     public ResponseEntity<byte[]> asset(@PathVariable String id,@PathVariable String filename){
