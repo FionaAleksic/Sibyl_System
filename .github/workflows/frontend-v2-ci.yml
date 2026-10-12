@@ -25,3 +25,10 @@ jobs:
       - name: Typecheck and build
         working-directory: frontend-v2
         run: npm run build
+      - name: Upload tested standalone frontend assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: sibyl-frontend-v2-dist
+          path: frontend-v2/dist/
+          retention-days: 30
+          if-no-files-found: error
