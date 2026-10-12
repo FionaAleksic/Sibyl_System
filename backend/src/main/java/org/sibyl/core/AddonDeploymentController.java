@@ -49,7 +49,7 @@ public final class AddonDeploymentController {
             .header("X-Content-Type-Options","nosniff")
             // Sandboxed even in a first-party URL. No cookie, API or Core DOM access.
             .header("Content-Security-Policy","sandbox allow-scripts allow-top-navigation-by-user-activation; "+
-                "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
+                "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "+
                 "img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'")
             .header(HttpHeaders.CACHE_CONTROL,"no-store")
             .body(asset.bytes());
