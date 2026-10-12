@@ -19,7 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping("/api/v1/ext/{addon}/records")
-public final class AddonRecordsController {
+public class AddonRecordsController {
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private static final int MAX_BODY=120_000;
