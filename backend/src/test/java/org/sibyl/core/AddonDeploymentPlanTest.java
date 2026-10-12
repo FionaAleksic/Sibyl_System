@@ -55,4 +55,27 @@ class AddonDeploymentPlanTest {
                 ()->AddonDeploymentPlan.read(zip,json,"Sibyl.demo","0.1.0-rc.2"));
         } finally {Files.deleteIfExists(temp);}
     }
+    @Test void acceptsMigrationAndWorkerButNotUnknownCommands() throws Exception {
+        String descriptor="""
+          {"schema":1,"id":"Sibyl.demo","version":"0.1.0-rc.3",
+           "kind":"feature","dependencies":[],
+           "operations":[
+             {"type":"migrate-db","path":"migrations/V001__init.sql","label":""},
+             {"type":"register-worker","path":"backend/worker.jar","label":""},
+             {"type":"publish-ui","path":"ui/index.html","label":"Demo"}]}
+          """;
+        Path path=Files.createTempFile("sibyl-worker-contract",".zip");
+        try(ZipOutputStream zip=new ZipOutputStream(Files.newOutputStream(path))){
+            put(zip,"module.json","{\"id\":\"Sibyl.demo\",\"version\":\"0.1.0-rc.3\"}");
+            put(zip,"deployment.json",descriptor);
+            put(zip,"migrations/V001__init.sql","CREATE TABLE sample(id INT PRIMARY KEY)");
+            put(zip,"backend/worker.jar","not a real jar in manifest-only test");
+            put(zip,"ui/index.html","<!doctype html><h1>Demo</h1>");
+        }
+        try(ZipFile zip=new ZipFile(path.toFile())) {
+            var result=AddonDeploymentPlan.read(zip,json,"Sibyl.demo","0.1.0-rc.3");
+            assertEquals(3,result.operations().size());
+            assertEquals("register-worker",result.operations().get(1).type());
+        }finally {Files.deleteIfExists(path);}
+    }
 }

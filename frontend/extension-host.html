@@ -22,7 +22,7 @@
   if(event.source!==frame.contentWindow||event.origin!=='null')return;
   const msg=event.data;
   if(!msg||msg.sibyl!=='invoke'||!Number.isSafeInteger(msg.requestId)
-    ||!/[a-z][a-zA-Z0-9_-]{0,63}/.test(msg.method||'')
+    ||!/^([a-z][a-zA-Z0-9_-]{0,63})$/.test(msg.method||'')
     ||JSON.stringify(msg.payload||{}).length>60000)return;
   try{
    const csrf=await fetch('/api/v1/auth/csrf',{credentials:'same-origin'}).then(r=>{
