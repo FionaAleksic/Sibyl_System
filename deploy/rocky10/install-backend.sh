@@ -18,7 +18,7 @@ fresh_mysql=0
 [[ -f /var/lib/mysql/auto.cnf ]] || fresh_mysql=1
 # Minimal Rocky cloud images may contain a stale python-unversioned-command RPM.
 # If an RPM mirror version mismatch occurs, resolve it before retrying this installer.
-dnf -y install mysql8.4-server mysql8.4 java-21-openjdk-headless curl ca-certificates openssl python3 firewalld policycoreutils
+dnf -y install mysql8.4-server mysql8.4 java-21-openjdk-headless curl ca-certificates openssl python3 firewalld policycoreutils bubblewrap
 # MySQL is needed only by the local Java backend; block listening on the VM network.
 cat >/etc/my.cnf.d/sibyl-loopback.cnf <<'MYSQL_CFG'
 [mysqld]
