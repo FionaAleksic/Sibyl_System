@@ -91,7 +91,7 @@ public class SibylAddonSettingsController {
                 var entry = fields.next();
                 String key = entry.getKey();
                 if (key.length() > 64 || !key.matches("[a-zA-Z][a-zA-Z0-9_.-]*")
-                    || key.toLowerCase(Locale.ROOT).matches(".*(password|passwd|secret|token|credential|privatekey|apikey).*")
+                    || AddonConfigTemplates.secret(key)
                     || !nonSecretTree(entry.getValue(),depth+1)) return false;
             }
         } else if (node.isArray()) {
