@@ -118,9 +118,14 @@
                 <select id="addon-settings-id" required><option value="">Bitte Addon auswählen</option></select>
               </div>
               <div class="field">
-                <label for="addon-settings-json">Konfiguration (JSON)</label>
+                <label>Konfigurierbare Felder</label>
+                <div class="hint">Vorbelegte Werte stammen aus dem Addon-Release. Pflichtfelder müssen vor dem Speichern gesetzt werden; Geheimnisse werden nicht hier gespeichert.</div>
+                <div id="addon-settings-fields" class="settings-fields" role="list" aria-live="polite"></div>
+              </div>
+              <div class="field">
+                <label for="addon-settings-json">Erweiterte Konfiguration (JSON)</label>
                 <textarea id="addon-settings-json" rows="8" spellcheck="false" aria-describedby="addon-settings-hint">{}</textarea>
-                <span id="addon-settings-hint" class="hint">Nur nicht geheime Werte. Eine formularbasierte Darstellung anhand der Addon-Schemata folgt.</span>
+                <span id="addon-settings-hint" class="hint">Nur nicht geheime Werte. Orientierung zu erlaubten Feldern, Datentypen und Standardwerten siehe oben. Beispielwerte sind keine echten Zugangsdaten.</span>
               </div>
               <button type="submit" class="button">Addon-Einstellungen speichern</button>
               <p id="addon-settings-status" role="status" aria-live="polite" class="small" style="margin-top:12px"></p>
