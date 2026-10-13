@@ -115,3 +115,39 @@ In `qm config 208` danach `scsi0` als alte, unbenutzte Originalplatte und `scsi1
 3. Auf VM207 `deploy/rocky10/install-frontend.sh` mit verifiziertem Frontend-CI-Artefakt, korrektem `FRONTEND_SHA256`, IPs und HTTPS installieren.
 4. Anschließend `/actuator/health`, `/healthz`, API Proxy, Addon Discovery, TLS und Admin-Login verifizieren. Vor breiter Freigabe Bootstrap-Adminpasswort ändern und separate Firewallsegmente sicherstellen.
 5. Die Installer wurden via GitHub Actions auf **Bash-Syntax**, aber noch nicht auf echten Rocky-VMs ende-zu-ende ausgeführt.
+
+
+## Abschlussstand 13.10.2026 – tatsächlicher Sibyl-Rocky-Deploy
+
+**Dieser Abschnitt überschreibt die früheren Zwischenstände, in denen VM207/VM208 noch nicht installiert oder per SSH erreichbar waren.**
+
+### Frontend-VM207 `srvedge.nl.nikoit.de`
+- Rocky Linux 10.2, `172.22.120.247/24`, Guest Agent, SSH als `fiona` mit bestehendem Sibyl-Labor-Public-Key, `sudo`.
+- Nginx 1.26.3 und firewalld aktiviert, SELinux **Enforcing**. TLS mit **30 Tage gültigem selbstsigniertem** Testzertifikat.
+- HTTPS-Adresse: `https://172.22.120.247/`. Der Zugriff auf Port 443 ist absichtlich auf die Management-IP `172.22.100.118/32` begrenzt; Browser von anderen PCs werden derzeit NICHT freigeschaltet.
+- Releasestand React: GitHub Actions Build des Featurebranches, Head-SHA `08bbaa7fc1f0e3d62a339cca7e1110199491824f`, Artifact-ID `11825837939`, geprüfter ZIP-SHA-256 `4c4c09755668186f18149df03d59256f1e75e0de4219be852137372ad196a14b`.
+- Deployment `/srv/sibyl/frontend-v2/releases/08bbaa7fc1f0e3d62a339cca7e1110199491824f/`; aktiver Symlink `/srv/sibyl/frontend-v2/current`.
+- Nach Installerfehler `403` für `index.html`: Archiv-Extraktion unter `umask 077` erzeugte root-only Dateien. Der Fix `chmod -R a+rX` wurde live angewandt und in `deploy/rocky10/install-frontend.sh` persistiert.
+- Vom Manager `.118` verifiziert: `/` HTTP 200, `/healthz` HTTP 200, `/login.html` HTTP 200, React-JS und CSS jeweils HTTP 200. `/admin.html` und `/addons.html` leiten ohne Anmeldung weiter; `/api/v1/modules` antwortet ohne Login HTTP 401.
+- firewalld gestattet HTTPS ausschließlich von `172.22.100.118/32`. Standardfreigabe `cockpit` in firewalld entfernt, SSH verbleibt.
+
+### Backend-VM208 `srvbackend.nl.nikoit.de`
+- Rocky Linux 10.2, `172.22.120.248/24`, SSH als `fiona`, `sudo`, Guest Agent, SELinux **Enforcing**.
+- Java 21, MySQL 8.4.11, `sibyl-core.service`, firewalld aktiviert und als Systemdienste für Boot aktiviert.
+- Sibyl Core JAR aus veröffentlichtem GitHub Prerelease `v0.1.0-rc.16`; veröffentlichter GitHub-JAR-SHA-256 `4a431b59567c58b0910b59ffa287a795031c167e015a56af71928990d69e4952`. Die Release-Download-Prüfung erfolgt im Rocky-Installer.
+- MySQL 8.4-Schema `sibyl` wurde erstellt. Flyway-Migrationen v1 bis v4 erfolgreich angewandt und nach MySQL-Neustart erneut validiert. Live `/actuator/health` auf `172.22.120.248:8080` meldet JSON `{"status":"UP"}`.
+- `sibyl_users`: genau `admin`, Rolle `ADMIN`, `enabled=1`, `must_change_password=1`. **Initialpasswort unverändert; Passwortwechsel durch Betreiber noch nötig.**
+- `sibyl_addon_installs`: 0 Einträge. Die modulare Addon-Installation ist deshalb **nicht** als abgeschlossen zu bezeichnen.
+- Datenbankports MySQL `3306` und MySQL-X `33060` lauschen ausschließlich auf `127.0.0.1` nach Installation von `/etc/my.cnf.d/sibyl-loopback.cnf`. SQL-Zugangsdaten nur in root-geschützten Dateien `/etc/sibyl/`, nicht ins Repo kopieren.
+- Backend HTTP `8080` ist nur von der Frontend-IP `172.22.120.247/32` in firewalld zugelassen. Über Reverse Proxy `https://172.22.120.247/api/v1/modules`: ohne Login HTTP 401 (vor Firewall-Fix HTTP 502). Unnötige Cockpit-Firewall-Freigabe entfernt.
+- Erster `cloud-init`-Paketupdateversuch schlug wegen `python-unversioned-command` mit alter, hart gepinnter Python-3-Version fehl. Dry-Run zeigte nur eine optionale Abhängigkeit, das Paket wurde entfernt. Danach installierten `dnf`, Java 21, MySQL 8.4 und Core erfolgreich. Cloud-init-Historie kann den ursprünglichen Fehler weiterhin melden.
+- Der ursprüngliche Rocky-Backend-Installer prüfte irrtümlich `127.0.0.1:8080`, obwohl `SIBYL_LISTEN_ADDRESS=172.22.120.248` konfiguriert war. Die Java-App startete tatsächlich und migrierte erfolgreich, aber der fehlerhafte Check verhinderte die abschließende Firewallregel. Firewallregel live gesetzt; Installer-Code auf `$listen` korrigiert.
+- Flyway warnt, dass die aktuelle Version offiziell nur bis MySQL 8.1 getestet ist, obwohl 8.4 im Labor funktionierte. Vor Produktionsfreigabe Kompatibilität/Upgrade der Flyway-Version prüfen.
+
+### Tests und Grenzen
+- Verifizierte Web-Antworten: `/healthz` 200, `/` 200, `/login.html` 200, `/login.js` 200, React JS 200, React CSS 200, geschützte Admin-/Addon-Seiten ohne Login 302, `/api/v1/modules` ohne Login 401.
+- Automatisierter Login-Test mit Bootstrap-Credentials wurde von der Fernzugriffs-Sicherheitsprüfung **blockiert** und **nicht** anderweitig umgangen. **Kein bestätigter E2E-Login, Passwortwechsel oder Addon-Installations-End-to-End-Test.**
+- App aktuell **Labor-/Pre-Release**, nicht öffentlich oder produktionsreif. Self-signed Zertifikat ersetzen, Admin-Passwort ändern, IPAM/Netzsegmentierung prüfen und UI/Addons testen, bevor weitere Client-IP-Adressen freigegeben werden.
+- GitHub-CI nach beiden Skript-Fixes erfolgreich: Rocky Installer Syntax run `38441621051`, Frontend Build `38441621191`, Backend capability CI `38441620996`. Installer selbst wurde mit Live-Fixes erfolgreich als Grundlage eingesetzt; CI allein ersetzt keine E2E-Abnahme.
+- Beide Gäste booten zum Prüfzeitpunkt noch mit Kernel `6.12.0-211.16.1.el10_2.0.1`, während neuere installierte Kernel bereitstehen (VM207 `6.12.0-211.58.1`, VM208 `6.12.0-211.64.1`). Versuch eines Remote-Reboots von VM207 bestätigte **keinen** geänderten Bootzeitpunkt: `uptime -s` weiterhin `2026-10-13 17:12:03`. Neustarts zur Kernelaktivierung und anschließende Persistenztests sind ausstehend; keine erzwungenen Neustarts vorgenommen.
+- Alte Sibyl-VMs 200–206 sowie die Ubuntu-Vorlage 9500 wurden nicht gelöscht oder neu konfiguriert.
