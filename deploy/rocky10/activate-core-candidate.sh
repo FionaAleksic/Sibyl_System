@@ -60,7 +60,7 @@ ln -sfn "$destination" /opt/sibyl/current.jar.next
 mv -Tf /opt/sibyl/current.jar.next /opt/sibyl/current.jar
 systemctl restart sibyl-core
 for n in $(seq 1 50); do
-  if curl -fsS --connect-timeout 2 --max-time 3 http://127.0.0.1:8080/actuator/health > "$tmp/health"; then
+  if curl -fsS --connect-timeout 2 --max-time 3 http://172.22.120.248:8080/actuator/health > "$tmp/health"; then
     if grep -Fq '"UP"' "$tmp/health"; then break; fi
   fi
   sleep 2
