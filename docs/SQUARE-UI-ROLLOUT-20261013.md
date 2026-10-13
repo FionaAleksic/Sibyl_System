@@ -50,3 +50,25 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://172.22.120.247/api/v1/modules
 ```
 
 Erwartung: `current` zeigt auf `/srv/sibyl/frontend-v2/releases/57e33b427327a74faee91233c2f1257847f99f03`. Startseite und CSS antworten 200. API ohne Session antwortet 401 (oder 200 mit vorhandener Session). Login und Administration nach dem Deployment im Browser prüfen. Die Standardpasswörter dürfen nicht weiterverwendet werden.
+
+
+## Abschluss: automatisch auf Rocky-VM207 deployed
+
+Stand 13.10.2026. Frühere Angaben oben zur notwendigen manuellen Aktivierung sind **überholt**: Die Veröffentlichung wurde ohne Benutzeraktion auf VM207 abgeschlossen.
+
+- Remote Deployment über autorisierten SSH-Zugang `.118` zu Rocky-VM207 ausgeführt.
+- Originaler Aktivierungstest schlug zweimal fehl und löste jeweils automatisch das erfolgreiche Rollback auf die alte Releaseversion aus.
+- Erste Ursache: `curl | grep -q` mit `pipefail` konnte zu einem fehlerhaften Exitstatus führen.
+- Zweite Ursache: Direkt nach `systemctl reload nginx` wurde das bisherige Backend-Login-CSS noch bedient; der Smoke-Test wurde fälschlich als Fehlschlag bewertet.
+- Korrekturversion des Deploy-Skripts: Commit `d76f1f20c6da4586fd3a8f125faf957e07bff792`; CSS-Test prüft den Body korrekt und wartet bei nginx-Reload bis zu 20 Sekunden auf die neue Datei.
+- Mit dieser Version endete das Deployment **Exitcode 0** und meldete `New square frontend active`.
+- Aktiver `current`-Symlink: `/srv/sibyl/frontend-v2/releases/57e33b427327a74faee91233c2f1257847f99f03`.
+- Frühere Version als Rollback weiterhin vorhanden: `/srv/sibyl/frontend-v2/releases/08bbaa7fc1f0e3d62a339cca7e1110199491824f`.
+- Vollständiges ZIP lokal auf VM207: `SHA-256 5103f6f04611998097bf54e68443f639d675e62b5e721e9b6fedadd13fadca4a`.
+- Neu ausgeliefert: JS `/assets/index-D9u3az7r.js`, CSS `/assets/index-CWsO5ZhO.css` und `/login.css` mit geprüftem `border-radius:0`.
+- HTTP: `/` **200**, `/login.html` **200**, `/login.css` **200**, `/healthz` **200**, `/admin.html` **302** (Loginumleitung), `/api/v1/modules` **401** ohne Anmeldung (erwartet).
+- Nginx-Syntaxprüfung erfolgreich, `nginx` und `firewalld` beide `active`.
+- HTTPS-Allowlist unverändert: `172.22.100.0/24`, `172.22.120.0/24`, `deny all`.
+- Weder Java-/MySQL-Backend noch Daten, Accounts oder Addons wurden mit dem UI-Rollout verändert.
+
+**Abnahme:** Der technische UI-Rollout und die HTTP-Basistests sind erfolgreich. Browseransicht nach Login, umfassende Addon-Funktionstests und späterer Zertifikatstausch sind separate Aufgaben.
