@@ -40,7 +40,7 @@ if ! "${mysqlcmd[@]}" -e "SELECT VERSION()" >/dev/null 2>&1; then
     MYSQL_PWD="$temporary" mysql --protocol=socket --user=root --connect-expired-password --batch --silent \
       -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootpw';"
     unset temporary
-    printf '[client]\\nuser=root\\npassword=%s\\n' "$rootpw" > "$root_opts"
+    printf '[client]\nuser=root\npassword=%s\n' "$rootpw" > "$root_opts"
     chmod 0600 "$root_opts"
     unset rootpw
     mysqlcmd=(mysql --defaults-extra-file="$root_opts" --protocol=socket --user=root --batch --silent)
@@ -50,7 +50,7 @@ fi
 if [[ "$fresh_mysql" == 1 && ! -e "$root_opts" ]]; then
     rootpw="$(openssl rand -hex 32)"
     "${mysqlcmd[@]}" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootpw';"
-    printf '[client]\\nuser=root\\npassword=%s\\n' "$rootpw" > "$root_opts"
+    printf '[client]\nuser=root\npassword=%s\n' "$rootpw" > "$root_opts"
     chmod 0600 "$root_opts"
     unset rootpw
     mysqlcmd=(mysql --defaults-extra-file="$root_opts" --protocol=socket --user=root --batch --silent)
