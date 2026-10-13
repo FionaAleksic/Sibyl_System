@@ -13,13 +13,48 @@ listen="${SIBYL_LISTEN_ADDRESS:-127.0.0.1}"
 frontend="${SIBYL_FRONTEND_IP:-172.22.120.247}"
 [[ "$frontend" =~ ^172\.22\.120\.[0-9]{1,3}$ ]] || { echo "Invalid frontend lab IP" >&2; exit 1; }
 
+# Distinguish a truly new RPM MySQL installation from an existing database.
+fresh_mysql=0
+[[ -f /var/lib/mysql/auto.cnf ]] || fresh_mysql=1
 dnf -y install mysql8.4-server mysql8.4 java-21-openjdk-headless curl ca-certificates openssl python3 firewalld policycoreutils
 systemctl enable --now mysqld firewalld
-mysql --protocol=socket --user=root --batch --skip-column-names -e 'SELECT VERSION()' >/dev/null || {
-    echo "Local MySQL root socket access unavailable; resolve authentication first (do not reset a populated DB)" >&2
-    exit 1
-}
 install -d -m 0700 /etc/sibyl
+root_opts=/etc/sibyl/mysql-root.cnf
+mysqlcmd=(mysql --protocol=socket --user=root --batch --silent)
+if [[ -f "$root_opts" ]]; then
+    mysqlcmd=(mysql --defaults-extra-file="$root_opts" --protocol=socket --user=root --batch --silent)
+fi
+if ! "${mysqlcmd[@]}" -e "SELECT VERSION()" >/dev/null 2>&1; then
+    # MySQL RPM may generate a one-time, expired random password; use it only on
+    # a FRESH instance and rotate immediately. Never reset an existing database.
+    [[ "$fresh_mysql" == 1 && ! -e "$root_opts" ]] || {
+        echo "Existing MySQL root authentication is unavailable; refusing credential reset" >&2
+        exit 1
+    }
+    temporary="$(sed -n 's/^.*temporary password is generated for root@localhost: //p' /var/log/mysqld.log 2>/dev/null | tail -1)"
+    [[ -n "$temporary" ]] || {
+        echo "No fresh-instance MySQL temporary root password in /var/log/mysqld.log" >&2
+        exit 1
+    }
+    rootpw="$(openssl rand -hex 32)"
+    MYSQL_PWD="$temporary" mysql --protocol=socket --user=root --connect-expired-password --batch --silent \
+      -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootpw';"
+    unset temporary
+    printf '[client]\\nuser=root\\npassword=%s\\n' "$rootpw" > "$root_opts"
+    chmod 0600 "$root_opts"
+    unset rootpw
+    mysqlcmd=(mysql --defaults-extra-file="$root_opts" --protocol=socket --user=root --batch --silent)
+fi
+"${mysqlcmd[@]}" -e "SELECT VERSION()" >/dev/null
+# Secure a genuinely fresh no-password root account, if a vendor image exposes one.
+if [[ "$fresh_mysql" == 1 && ! -e "$root_opts" ]]; then
+    rootpw="$(openssl rand -hex 32)"
+    "${mysqlcmd[@]}" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootpw';"
+    printf '[client]\\nuser=root\\npassword=%s\\n' "$rootpw" > "$root_opts"
+    chmod 0600 "$root_opts"
+    unset rootpw
+    mysqlcmd=(mysql --defaults-extra-file="$root_opts" --protocol=socket --user=root --batch --silent)
+fi
 install -d -m 0755 /opt/sibyl
 id sibyl &>/dev/null || useradd --system --home-dir /var/lib/sibyl --shell /sbin/nologin --user-group sibyl
 install -d -o sibyl -g sibyl -m 0700 /var/lib/sibyl /var/lib/sibyl/addons
@@ -38,7 +73,7 @@ fi
     printf "ALTER USER 'sibyl'@'%s' IDENTIFIED BY '%s';\n" "$host" "$dbpass"
     printf "GRANT ALL PRIVILEGES ON sibyl.* TO 'sibyl'@'%s';\n" "$host"
   done
-} | mysql --protocol=socket --user=root --batch --silent
+} | "${mysqlcmd[@]}"
 {
   printf 'SIBYL_DB_URL=jdbc:mysql://127.0.0.1:3306/sibyl?sslMode=REQUIRED&connectionTimeZone=UTC\n'
   printf 'SIBYL_DB_USER=sibyl\nSIBYL_DB_PASSWORD=%s\n' "$dbpass"
