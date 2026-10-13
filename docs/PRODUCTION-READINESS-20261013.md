@@ -64,6 +64,8 @@
 
 Ein Remote-Schreibzugriff zum Erzeugen eines MySQL-Backups wurde durch die Fernzugriffs-Sicherheitsprüfung blockiert. Es liegt **kein durch diesen Durchlauf bestätigtes Datenbank-Backup** vor. Nicht durch einen alternativen Verwaltungsweg umgehen.
 
+Das Repository enthält nun den fail-closed Entwurf [`deploy/rocky10/backup-database.sh`](../deploy/rocky10/backup-database.sh). Er verweigert die Ausführung ohne ausdrücklich konfigurierten **extern gemounteten Speicher** und führt keine lokale Notfallkopie durch. Der Betreiber muss vor Aktivierung verschlüsselte Übertragung, Verschlüsselung im Ruhezustand, Zugriffsschutz und erfolgreichen Wiederherstellungstest bestätigen. Das Skript wurde **nicht auf dem produktiven Backend aktiviert oder ausgeführt**.
+
 Anforderung: MySQL-Sicherung mit `--single-transaction` + Routinen/Trigger/Events, verschlüsselte Kopie **außerhalb** der Backend-VM, automatisierte Aufbewahrung/Rotation, definierte RPO/RTO, regelmäßiger Restore-Test in einer isolierten Staging-DB sowie VM-Level-Snapshot/Backup für Disaster Recovery. Ein Backup nur auf derselben VM ist kein ausreichender Schutz.
 
 ### 2. Vertrauenswürdiges HTTPS-Zertifikat (**nicht erfüllt**)
