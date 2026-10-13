@@ -32,10 +32,10 @@ base=https://172.22.120.247
 # Allow Nginx to finish reloading and check responses. Authenticated assets redirect without session.
 for i in $(seq 1 12); do
   code=$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 5 "$base/sibyl.css")
-  [[ "$code" == 302 || "$code" == 200 ]] && break
+  [[ "$code" == 302 ]] && break
   sleep 1
 done
-[[ "$code" == 302 || "$code" == 200 ]] || { echo 'Core asset routing failed' >&2; rollback; exit 1; }
+[[ "$code" == 302 ]] || { echo 'Core asset routing failed' >&2; rollback; exit 1; }
 [[ $(curl -ksS -o /dev/null -w '%{http_code}' --max-time 6 "$base/login.html") == 200 ]]
 [[ $(curl -ksS -o /dev/null -w '%{http_code}' --max-time 6 "$base/") == 200 ]]
 echo 'Core UI asset proxy active; unauthenticated /sibyl.css HTTP' "$code"
