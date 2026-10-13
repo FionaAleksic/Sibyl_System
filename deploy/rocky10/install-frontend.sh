@@ -76,6 +76,11 @@ server {
     add_header Referrer-Policy no-referrer always;
     add_header Cache-Control "no-store" always;
 
+    # The login page is rendered by Sibyl Core, but shares the frontend design system.
+    # An exact location keeps only its stylesheet local; login processing stays on Core.
+    location = /login.css {
+        try_files /login.css =404;
+    }
     location = /healthz {
         default_type text/plain;
         return 200 "sibyl rocky10 frontend active\\n";
