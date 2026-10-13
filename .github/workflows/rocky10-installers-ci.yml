@@ -20,4 +20,8 @@ jobs:
         run: |
           bash -n deploy/rocky10/install-backend.sh
           bash -n deploy/rocky10/install-frontend.sh
-          echo 'Installer shell syntax OK'
+          bash -n deploy/rocky10/enable-core-ui-assets.sh
+          bash -n deploy/rocky10/activate-square-ui.sh
+          bash -n deploy/rocky10/activate-frontend-release.sh
+          bash -n deploy/rocky10/backup-database.sh
+          echo 'Rocky installer, deployment and backup shell syntax OK'
