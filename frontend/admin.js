@@ -102,6 +102,29 @@ $('import-file').addEventListener('change',async()=>{
 $('reset-config').addEventListener('click',()=>{
   if(!settings)return;populate(settings);status('save-status','Nicht gespeicherte Änderungen verworfen.');
 });
+function renderAddonGuidance(data){
+  const container=$('addon-settings-fields');
+  container.replaceChildren();
+  if(!data.schemaAvailable){
+    const line=document.createElement('p');
+    line.textContent='Noch kein Konfigurationsschema verfügbar. Bitte Release herunterladen.';
+    line.className='small muted';
+    container.append(line);
+    return;
+  }
+  const properties=data.schema?.properties||{};
+  const required=new Set(data.required||[]);
+  for(const [name,rule] of Object.entries(properties)){
+    if(/(password|passwd|secret|token|privatekey|apikey)/i.test(name))continue;
+    const row=document.createElement('div');row.className='settings-field';row.setAttribute('role','listitem');
+    const heading=document.createElement('strong');
+    heading.textContent=(rule.title||name)+(required.has(name)?' · Pflichtfeld':'');
+    const description=document.createElement('p');
+    const defaultValue=data.defaults&&Object.hasOwn(data.defaults,name)?JSON.stringify(data.defaults[name]):'kein Standardwert';
+    description.textContent=(rule.description||'')+' · Typ: '+(rule.type||'vorgegeben')+' · Standard: '+defaultValue;
+    row.append(heading,description);container.append(row);
+  }
+}
 async function listAddonSettings(){
   const select=$('addon-settings-id');
   select.replaceChildren(new Option('Bitte Addon auswählen',''));
@@ -120,8 +143,12 @@ $('addon-settings-id').addEventListener('change',async()=>{
   if(!authorization||!id){$('addon-settings-json').value='{}';return;}
   try{
     const data=await request('/addon-settings/'+encodeURIComponent(id));
-    $('addon-settings-json').value=JSON.stringify(data.settings||{},null,2);
-    status('addon-settings-status','Einstellungen aus der Sibyl-Datenbank geladen.');
+    const values={...(data.defaults||{}),...(data.settings||{})};
+    $('addon-settings-json').value=JSON.stringify(values,null,2);
+    renderAddonGuidance(data);
+    status('addon-settings-status',data.schemaAvailable
+      ? 'Feldbeschreibungen und Standardwerte geladen. Ungespeicherte Vorschläge bitte prüfen.'
+      : 'Noch kein heruntergeladenes Konfigurationsschema für dieses Addon.');
   }catch(error){status('addon-settings-status','Laden fehlgeschlagen: '+error.message,true);}
 });
 $('addon-settings-form').addEventListener('submit',async event=>{
