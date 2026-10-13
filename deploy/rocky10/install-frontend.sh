@@ -28,7 +28,7 @@ manager="${SIBYL_ADMIN_IP:-172.22.100.118}"
   echo "Admin IP outside authorized management network" >&2; exit 1;
 }
 
-dnf -y install nginx openssl python3 firewalld policycoreutils
+dnf -y install nginx openssl python3 firewalld policycoreutils-python-utils
 systemctl enable --now firewalld
 release="${FRONTEND_RELEASE_ID:-manual-verified-artifact}"
 [[ "$release" =~ ^[A-Za-z0-9._-]{3,90}$ ]] || { echo "Invalid release ID" >&2; exit 1; }
@@ -45,7 +45,10 @@ with zipfile.ZipFile(source) as archive:
     archive.extractall(target)
 PY
 ln -sfn "/srv/sibyl/frontend-v2/releases/$release" /srv/sibyl/frontend-v2/current
-restorecon -RF /srv/sibyl/frontend-v2 || true
+# Default SELinux labels on /srv can deny Nginx static asset reads.
+semanage fcontext -a -t httpd_sys_content_t '/srv/sibyl/frontend-v2(/.*)?' 2>/dev/null || \
+  semanage fcontext -m -t httpd_sys_content_t '/srv/sibyl/frontend-v2(/.*)?'
+restorecon -RF /srv/sibyl/frontend-v2
 install -d -m 0700 /etc/sibyl/tls
 if [[ ! -s /etc/sibyl/tls/lab.crt || ! -s /etc/sibyl/tls/lab.key ]]; then
   openssl req -new -x509 -nodes -sha256 -newkey rsa:3072 -days 30 \
@@ -93,7 +96,9 @@ server {
     location / { try_files \$uri \$uri/ /index.html; }
 }
 NGINX
-restorecon -RF /etc/nginx /etc/sibyl/tls || true
+semanage fcontext -a -t cert_t '/etc/sibyl/tls(/.*)?' 2>/dev/null || \
+  semanage fcontext -m -t cert_t '/etc/sibyl/tls(/.*)?'
+restorecon -RF /etc/sibyl/tls
 # Do not disable SELinux globally. Grant Nginx permission to reverse-proxy internally.
 setsebool -P httpd_can_network_connect 1
 nginx -t
