@@ -47,11 +47,11 @@ ln -sfn "$release" "$base/current.next"
 mv -Tf "$base/current.next" "$base/current"
 systemctl reload nginx
 site=https://172.22.120.247
-for i in $(seq 1 10); do
-  if curl -ksS --max-time 5 "$site/" | grep -F 'index-B8fql1t5.js' > /dev/null; then break; fi
+for i in $(seq 1 15); do
+  if cmp -s "$release/index.html" <(curl -ksS --max-time 5 "$site/"); then break; fi
   sleep 1
 done
-curl -ksS --max-time 5 "$site/" | grep -F 'index-B8fql1t5.js' >/dev/null
+cmp -s "$release/index.html" <(curl -ksS --max-time 5 "$site/")
 for path in / /login.html /login.css /healthz; do
   code=$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 6 "$site$path")
   [[ "$code" == 200 ]] || { echo "$path HTTP $code" >&2; exit 1; }
