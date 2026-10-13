@@ -59,7 +59,8 @@ url=https://172.22.120.247
 test "$(curl -ksS --max-time 10 -o /dev/null -w '%{http_code}' "$url/")" = 200
 test "$(curl -ksS --max-time 10 -o /dev/null -w '%{http_code}' "$url/login.html")" = 200
 test "$(curl -ksS --max-time 10 -o /dev/null -w '%{http_code}' "$url/login.css")" = 200
-curl -ksS --max-time 10 "$url/login.css" | grep -Fq 'border-radius:0'
+login_css=$(curl -ksS --max-time 10 "$url/login.css")
+grep -Fq 'border-radius:0' <<< "$login_css"
 api=$(curl -ksS --max-time 10 -o /dev/null -w '%{http_code}' "$url/api/v1/modules")
 test "$api" = 401 || test "$api" = 200
 finished=1
