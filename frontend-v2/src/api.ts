@@ -38,9 +38,17 @@ export async function loadShell(signal: AbortSignal): Promise<ShellState> {
       "version" in m && typeof m.version === "string" &&
       "type" in m && typeof m.type === "string"
     ).filter((m: Module) => m.id.length <= 100 && m.name.length <= 120);
-    const admin = await request("/api/v1/admin/capabilities", signal);
-    // 403 means ordinary user; a missing v2 backend endpoint also hides the admin link.
-    return { kind: "ready", modules, admin: admin.ok };
+    // The published Core release has /api/v1/auth/me but may predate the
+    // optional v2 capabilities endpoint. Role comes from the authenticated server.
+    const account = await request("/api/v1/auth/me", signal);
+    if (account.status === 401 || account.status === 403) return { kind: "login" };
+    if (!account.ok) throw new Error("Kontoinformationen konnten nicht geladen werden.");
+    const details: unknown = await account.json();
+    if (typeof details !== "object" || details === null) throw new Error("Ungültiger Kontostatus.");
+    const role = "role" in details ? details.role : undefined;
+    const mustChange = "mustChangePassword" in details ? details.mustChangePassword : false;
+    if (mustChange === true) return { kind: "login" };
+    return { kind: "ready", modules, admin: role === "ADMIN" };
   } catch (error) {
     if (signal.aborted) return { kind: "loading" };
     return { kind: "error", message: error instanceof Error ? error.message : "Verbindungsfehler" };
