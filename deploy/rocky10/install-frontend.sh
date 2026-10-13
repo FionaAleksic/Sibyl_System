@@ -92,6 +92,15 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
     }
+    # Authenticated, sandboxed addon UI assets come from the Core runtime.
+    location ^~ /extensions/ {
+        proxy_pass http://${backend}:8080;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 30s;
+    }
     location ^~ /api/ {
         proxy_pass http://${backend}:8080;
         proxy_http_version 1.1;
