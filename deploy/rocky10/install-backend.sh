@@ -16,7 +16,17 @@ frontend="${SIBYL_FRONTEND_IP:-172.22.120.247}"
 # Distinguish a truly new RPM MySQL installation from an existing database.
 fresh_mysql=0
 [[ -f /var/lib/mysql/auto.cnf ]] || fresh_mysql=1
+# Minimal Rocky cloud images may contain a stale python-unversioned-command RPM.
+# If an RPM mirror version mismatch occurs, resolve it before retrying this installer.
 dnf -y install mysql8.4-server mysql8.4 java-21-openjdk-headless curl ca-certificates openssl python3 firewalld policycoreutils
+# MySQL is needed only by the local Java backend; block listening on the VM network.
+cat >/etc/my.cnf.d/sibyl-loopback.cnf <<'MYSQL_CFG'
+[mysqld]
+bind-address=127.0.0.1
+mysqlx-bind-address=127.0.0.1
+MYSQL_CFG
+chmod 0644 /etc/my.cnf.d/sibyl-loopback.cnf
+mysqld --validate-config
 systemctl enable --now mysqld firewalld
 install -d -m 0700 /etc/sibyl
 root_opts=/etc/sibyl/mysql-root.cnf
@@ -131,7 +141,7 @@ systemctl daemon-reload
 systemctl enable --now sibyl-core
 systemctl restart sibyl-core
 for i in $(seq 1 40); do
-  if curl -fsS --max-time 3 "http://127.0.0.1:8080/actuator/health" >/dev/null; then
+  if curl -fsS --max-time 3 "http://$listen:8080/actuator/health" >/dev/null; then
     echo "Sibyl backend localhost health OK"
     break
   fi
@@ -142,6 +152,7 @@ for i in $(seq 1 40); do
   sleep 2
 done
 if [[ "$listen" != 127.0.0.1 ]]; then
+  firewall-cmd --permanent --remove-service=cockpit || true
   firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$frontend/32 port port=8080 protocol=tcp accept"
   firewall-cmd --reload
   echo "Port 8080 allowed in firewalld to configured frontend $frontend only; audit other zones and external firewall rules."
