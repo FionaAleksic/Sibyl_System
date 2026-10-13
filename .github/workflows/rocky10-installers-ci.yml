@@ -21,6 +21,8 @@ jobs:
           bash -n deploy/rocky10/install-backend.sh
           bash -n deploy/rocky10/install-frontend.sh
           bash -n deploy/rocky10/enable-core-ui-assets.sh
+          bash -n deploy/rocky10/enable-addon-ui-route.sh
+          bash -n deploy/rocky10/activate-core-candidate.sh
           bash -n deploy/rocky10/activate-square-ui.sh
           bash -n deploy/rocky10/activate-frontend-release.sh
           bash -n deploy/rocky10/backup-database.sh
