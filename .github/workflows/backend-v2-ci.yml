@@ -4,6 +4,7 @@ on:
     branches: [feature/deck-inspired-v2]
     paths:
       - 'backend/**'
+      - 'frontend/**'
       - '.github/workflows/backend-v2-ci.yml'
   pull_request:
     paths:
@@ -42,6 +43,12 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/pom.xml
+      - name: Validate core-managed Addon Browser JS
+        run: |
+          node --check frontend/addons.js
+          node --check frontend/admin.js
+          node --check frontend/login.js
+          node --check frontend/sibyl.js
       - name: Test Sibyl backend and capability registry
         working-directory: backend
         run: mvn --batch-mode --no-transfer-progress clean verify
