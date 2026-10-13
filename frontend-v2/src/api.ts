@@ -25,7 +25,7 @@ async function request(path: string, signal?: AbortSignal): Promise<Response> {
 
 export async function loadShell(signal: AbortSignal): Promise<ShellState> {
   try {
-    const response = await request("/api/v1/modules", signal);
+    const response = await request("/api/v1/extensions", signal);
     if (response.status === 401 || response.status === 403) return { kind: "login" };
     if (!response.ok) throw new Error("Die Modulübersicht ist derzeit nicht erreichbar.");
     const json: unknown = await response.json();
