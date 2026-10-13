@@ -85,6 +85,13 @@ server {
         default_type text/plain;
         return 200 "sibyl rocky10 frontend active\\n";
     }
+    # Native Core pages (Admin and Addon Browser) load protected CSS/JS from backend.
+    location ~ ^/(sibyl\.(css|js)|styles\.css|addon-browser\.js|module\.js)$ {
+        proxy_pass http://$backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
     location ^~ /api/ {
         proxy_pass http://${backend}:8080;
         proxy_http_version 1.1;
