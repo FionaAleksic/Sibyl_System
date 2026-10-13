@@ -151,3 +151,11 @@ In `qm config 208` danach `scsi0` als alte, unbenutzte Originalplatte und `scsi1
 - GitHub-CI nach beiden Skript-Fixes erfolgreich: Rocky Installer Syntax run `38441621051`, Frontend Build `38441621191`, Backend capability CI `38441620996`. Installer selbst wurde mit Live-Fixes erfolgreich als Grundlage eingesetzt; CI allein ersetzt keine E2E-Abnahme.
 - Beide Gäste booten zum Prüfzeitpunkt noch mit Kernel `6.12.0-211.16.1.el10_2.0.1`, während neuere installierte Kernel bereitstehen (VM207 `6.12.0-211.58.1`, VM208 `6.12.0-211.64.1`). Versuch eines Remote-Reboots von VM207 bestätigte **keinen** geänderten Bootzeitpunkt: `uptime -s` weiterhin `2026-10-13 17:12:03`. Neustarts zur Kernelaktivierung und anschließende Persistenztests sind ausstehend; keine erzwungenen Neustarts vorgenommen.
 - Alte Sibyl-VMs 200–206 sowie die Ubuntu-Vorlage 9500 wurden nicht gelöscht oder neu konfiguriert.
+
+
+## Freigabe für interne Netze (2026-10-13, 20:20 CEST)
+
+VM207 172.22.120.247: HTTPS/TCP 443 aus 172.22.100.0/24 und 172.22.120.0/24 erlaubt, andere Quellnetze weiterhin gesperrt. Nginx-ACL in /etc/nginx/conf.d/sibyl-v2.conf besteht aus allow 172.22.100.0/24; allow 172.22.120.0/24; deny all;.
+firewalld rich-rules für beide /24-Netze persistent ergänzt und neu geladen; redundante alte 172.22.100.118/32-Regel belassen. Vorherige Nginx-Konfiguration gesichert: /etc/nginx/conf.d/sibyl-v2.conf.bak-20261013-internal. Frühere Firewallregeln gesichert: /home/fiona/firewalld-before-internal-20261013.txt.
+Nginx-Syntaxprüfung erfolgreich; reload erfolgreich. Von 172.22.100.118: Startseite HTTP 200, Login HTTP 200, geschützte API ohne Session 401. Von Backend-VM 172.22.120.248: Frontend und /healthz HTTP 200. Backend 8080 weiterhin nur von 172.22.120.247/32 freigegeben.
+Eine separat adressierte DMZ und das öffentliche Internet wurden nicht zugelassen. DMZ-CIDR unbekannt; wenn DMZ-Hosts innerhalb der zwei freigegebenen /24-Netze liegen, müssten spezifische Sperrregeln folgen. Kein Live-Test von NL14313, da der Desktop-Commander-Agent offline war. Self-signed TLS-Zertifikat weiterhin aktiv.
