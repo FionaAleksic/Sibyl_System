@@ -64,8 +64,10 @@ export default function App() {
       <div className="side-heading">PLATTFORM</div>
       <button className={"nav-item " + (section === "home" ? "selected" : "")}
               onClick={() => setSection("home")}><Symbol text="⌂" /> Übersicht</button>
-      {state.admin && <button className={"nav-item " + (section === "admin" ? "selected" : "")}
-              onClick={() => setSection("admin")}><Symbol text="⚙" /> Administration</button>}
+      {state.admin && <>
+        <a className="nav-item" href="/addons.html"><Symbol text="▦" /><span>Addon-Browser</span></a>
+        <a className="nav-item" href="/admin.html"><Symbol text="⚙" /><span>Administration</span></a>
+      </>}
       {features.length > 0 && <div className="side-heading">DEINE MODULE</div>}
       {features.map(m => <button key={m.id}
         className={"nav-item " + (section === m.id ? "selected" : "")}
