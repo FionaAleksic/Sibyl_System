@@ -61,3 +61,57 @@ Die ursprüngliche Planung (207/208 noch nicht vorhanden) ist durch neue Betreib
 - Alte Sibyl-VMs 200–206 und Ubuntu-Vorlage 9500 bleiben unverändert.
 
 **Operator-Schritt, Proxmox GUI:** VM207 und VM208 einzeln über `Konsole` öffnen, prüfen ob Installer oder installiertes Rocky 10 läuft; falls Installer, die Rocky-10-Installation fertigstellen. Nach Login im Gast die Netzwerkkonfiguration mit `ip -br addr`, `nmcli con show --active` prüfen und die **von IPAM bestätigten** vorgesehenen Adressen `.247/24` (Frontend) und `.248/24` (Backend) mit Gateway `172.22.120.1` und DNS `172.22.100.202` setzen; Passwortlogin nach sicherem Einspielen des SSH-Public-Keys einschränken, ohne sich auszusperren. `sudo dnf install -y qemu-guest-agent && sudo systemctl enable --now qemu-guest-agent`. Ein Proxmox-VM-Agent muss außerdem in den **Optionen der VM** aktiviert sein. Sobald SSH auf beiden VMs als `fiona` funktioniert, erst Installer aus `deploy/rocky10/` ausführen. Beim Backend sind vor Freigabe die neuen Rocky-MySQL-8.4-Details durch echten Integrationstest zu validieren.
+
+
+## Fortschritt 13.10.2026 ab 19:07 – Rocky-Installation VM207
+
+Diese Messungen überschreiben ältere Zwischenstände, wonach keine der Rocky-VMs installiert war:
+
+### VM207 `srvedge` — Rocky 10.2 erfolgreich installiert und per SSH administrierbar
+
+- `qm config 207` zeigte CPU `host`, IDE2 ursprünglich Rocky-10.2-Boot-ISO, Ceph `vm-207-disk-0` (32 GiB).
+- VM207 wurde gestoppt. Das upstream-per-SHA256-verifizierte Rocky-10-GenericCloud-QCOW2 wurde mit `qm importdisk 207 ... Senfpool --format raw` als `vm-207-disk-1` importiert.
+- Die ursprüngliche `scsi0` blieb **unverändert** als leere Platte erhalten. `scsi1` ist neue Bootplatte, auf **32 GiB** erweitert, `boot: order=scsi1`.
+- Cloud-init wurde auf `ide2` (Ceph) gesetzt. `ciuser=fiona`, `sshkeys=/root/sibyl-lab-authorized.pub` (bereits existierender Lab-Key mit SHA256 `MHMEzZ/MNsWZp0i4UOTbJ/EHsOCdH50vyGAKdchg8nk`), IP `172.22.120.247/24`, Gateway `172.22.120.1`, DNS `172.22.100.202`, Domain `nl.nikoit.de`; serielle VM-Konsole und Guest Agent aktiviert.
+- VM bootet und ist per SSH von Verwaltungsserver `.118` erreichbar: `ssh -i /home/fiona/.ssh/id_ed25519_sibyl_lab fiona@172.22.120.247`.
+- Tatsächlich nachgewiesenes OS `Rocky Linux 10.2 (Red Quartz)`; Rootpartition `/dev/sdb4` rund **31 GiB**, SELinux **Enforcing**; `sudo -n` funktioniert, `sshd` aktiv, QEMU Guest Agent bereits installiert und aktiv.
+- `sudo cloud-init status --long`: **`status: done`**, jedoch `extended_status: degraded done` **wegen DEPRECATED-Konfigurationswarnung**; `errors: []`. Proxmox `qm guest cmd 207 network-get-interfaces` sieht `172.22.120.247`.
+- `sshd -T`: `passwordauthentication no`, `pubkeyauthentication yes`, `permitrootlogin without-password`. SSH-Root-Login mit Passwort damit deaktiviert; vollständige Härtung steht aus.
+- `nginx` **noch nicht installiert**; Remote Desktop Commander blockierte den Befehl zur `dnf install` durch eine Fernzugriff-Sicherheitsprüfung.
+- Rocky-Repositories `baseos`, `appstream`, `extras` vorhanden. GitHub API per IPv4 zuletzt HTTP 200. Ein früherer DNS-Timeout war transient.
+- Der persönliche Windows-Schlüssel von `NL14313` wurde in VM207 noch **nicht** zusätzlich installiert; bislang ist der vorhandene Sibyl-Laborverwaltungsschlüssel freigegeben.
+
+### VM208 `srvbackend` — ausgeschaltet, Rocky noch nicht installiert
+
+- Bei `qm config 208` CPU `host`, Ceph `vm-208-disk-0` (32 GiB), ursprüngliches Rocky-10.2-Boot-ISO; Agent noch nicht aktiviert.
+- VM208 wurde nach einer verzögerten ersten Stop-Anfrage zuletzt durch `qm stop 208` erfolgreich ausgeschaltet. `qm status 208` = **stopped**.
+- Der Remote-Desktop-Commander-Aufruf `qm importdisk 208 ...` wurde durch Sicherheitschecks blockiert. **Keine neue Bootplatte installiert; VM208 nicht startfertig**.
+- Nicht davon ausgehen, dass ein Zugriff über `172.22.120.248` bereits möglich ist.
+
+### Fortsetzung direkt durch Cluster-Administrator auf `NL1337-PVE-maeb`
+
+Das folgende Verfahren enthält **keine Löschung oder Überschreibung der bisherigen scsi0** und setzt voraus, dass VM208 weiterhin gestoppt ist. Administrator muss IP-Zuteilung (`.248`) und freien Ceph-Speicher bestätigen.
+
+```bash
+qm status 208
+sha256sum /var/lib/vz/template/iso/sibyl-rocky10-genericcloud.qcow2
+# Erwartet: 9fc9e9ff16888bb68ac39b0392e25c9c92684d50c85f1cce6ab549363bbc4b48
+ssh-keygen -lf /root/sibyl-lab-authorized.pub
+qm importdisk 208 /var/lib/vz/template/iso/sibyl-rocky10-genericcloud.qcow2 Senfpool --format raw
+qm config 208 | grep unused
+# Nur wenn unused0: Senfpool:vm-208-disk-1 angezeigt wird:
+qm set 208 --scsi1 Senfpool:vm-208-disk-1,iothread=1,discard=on --boot order=scsi1
+qm set 208 --ide2 Senfpool:cloudinit --ciuser fiona --sshkeys /root/sibyl-lab-authorized.pub --ipconfig0 ip=172.22.120.248/24,gw=172.22.120.1 --nameserver 172.22.100.202 --searchdomain nl.nikoit.de --serial0 socket --vga serial0 --agent enabled=1
+qm resize 208 scsi1 32G
+qm start 208
+```
+
+In `qm config 208` danach `scsi0` als alte, unbenutzte Originalplatte und `scsi1` als neue Bootplatte sowie `boot: order=scsi1` prüfen. Manuelle Aktion ist nötig, weil sich ein blockierter Fernzugriff nicht durch mehr Proxmox-Rootrechte freischalten lässt. Keine zusätzlichen SSH-Privatschlüssel kopieren.
+
+### Nach vollständiger VM208-Installation
+
+1. Über .118: `ssh -i /home/fiona/.ssh/id_ed25519_sibyl_lab fiona@172.22.120.248`; `cat /etc/os-release`, `sudo cloud-init status --long`, `ip -br addr`, `sudo dnf repolist` prüfen.
+2. Auf VM208 den aus Repo `deploy/rocky10/install-backend.sh` **vorher durch Administrator geprüften** Installer ausführen; mit `SIBYL_VERSION=0.1.0-rc.16 SIBYL_LISTEN_ADDRESS=172.22.120.248 SIBYL_FRONTEND_IP=172.22.120.247`; auf MySQL 8.4, Root-Erstpasswort, SELinux und Ports achten.
+3. Auf VM207 `deploy/rocky10/install-frontend.sh` mit verifiziertem Frontend-CI-Artefakt, korrektem `FRONTEND_SHA256`, IPs und HTTPS installieren.
+4. Anschließend `/actuator/health`, `/healthz`, API Proxy, Addon Discovery, TLS und Admin-Login verifizieren. Vor breiter Freigabe Bootstrap-Adminpasswort ändern und separate Firewallsegmente sicherstellen.
+5. Die Installer wurden via GitHub Actions auf **Bash-Syntax**, aber noch nicht auf echten Rocky-VMs ende-zu-ende ausgeführt.
