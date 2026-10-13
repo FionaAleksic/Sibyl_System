@@ -41,6 +41,7 @@ public final class AddonController {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", addon.id());
             item.put("name", addon.name());
+            item.put("repo", addon.repo());
             item.put("description", "GitHub: " + addon.repo());
             item.put("type", addon.type());
             try {

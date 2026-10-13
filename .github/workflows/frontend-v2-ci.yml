@@ -1,0 +1,34 @@
+name: Frontend v2 build
+on:
+  push:
+    branches: [feature/deck-inspired-v2]
+    paths:
+      - 'frontend-v2/**'
+      - '.github/workflows/frontend-v2-ci.yml'
+  pull_request:
+    paths:
+      - 'frontend-v2/**'
+      - '.github/workflows/frontend-v2-ci.yml'
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install exact dependencies
+        working-directory: frontend-v2
+        run: npm install --no-audit --no-fund
+      - name: Typecheck and build
+        working-directory: frontend-v2
+        run: npm run build
+      - name: Upload tested standalone frontend assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: sibyl-frontend-v2-dist
+          path: frontend-v2/dist/
+          retention-days: 30
+          if-no-files-found: error

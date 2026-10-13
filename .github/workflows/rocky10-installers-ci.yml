@@ -1,0 +1,29 @@
+name: Rocky Linux 10 installer syntax
+on:
+  push:
+    branches: [feature/deck-inspired-v2]
+    paths:
+      - 'deploy/rocky10/**'
+      - '.github/workflows/rocky10-installers-ci.yml'
+  pull_request:
+    paths:
+      - 'deploy/rocky10/**'
+      - '.github/workflows/rocky10-installers-ci.yml'
+permissions:
+  contents: read
+jobs:
+  bash-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Rocky installers
+        run: |
+          bash -n deploy/rocky10/install-backend.sh
+          bash -n deploy/rocky10/install-frontend.sh
+          bash -n deploy/rocky10/enable-core-ui-assets.sh
+          bash -n deploy/rocky10/enable-addon-ui-route.sh
+          bash -n deploy/rocky10/activate-core-candidate.sh
+          bash -n deploy/rocky10/activate-square-ui.sh
+          bash -n deploy/rocky10/activate-frontend-release.sh
+          bash -n deploy/rocky10/backup-database.sh
+          echo 'Rocky installer, deployment and backup shell syntax OK'

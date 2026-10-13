@@ -23,20 +23,28 @@ public class SibylAddonSettingsController {
     private final JdbcTemplate jdbc;
     private final AddonCatalog catalog;
     private final ObjectMapper mapper;
+    private final AddonConfigTemplates templates;
 
-    public SibylAddonSettingsController(JdbcTemplate jdbc, AddonCatalog catalog, ObjectMapper mapper) {
+    public SibylAddonSettingsController(JdbcTemplate jdbc, AddonCatalog catalog, ObjectMapper mapper,
+                                        AddonConfigTemplates templates) {
         this.jdbc = jdbc; this.catalog = catalog; this.mapper = mapper;
+        this.templates = templates;
     }
 
     @GetMapping("/{id}")
-    public Map<String,Object> get(@PathVariable String id) {
+    public Map<String,Object> get(@PathVariable String id,
+                                   @RequestParam(required = false) String releaseTag) {
         validAddon(id);
         var rows = jdbc.query(
             "SELECT CAST(settings_json AS CHAR) FROM sibyl_addon_settings WHERE addon_id=?",
             (rs,n) -> rs.getString(1), id);
         try {
             JsonNode value = rows.isEmpty()?mapper.createObjectNode():mapper.readTree(rows.get(0));
-            return Map.of("id",id,"settings",value);
+            var template = templates.load(id, releaseTag);
+            return Map.of("id", id, "settings", value,
+                "schema", template.schema(), "defaults", template.defaults(),
+                "required", template.required(), "missingRequired", templates.missingRequired(template, value),
+                "schemaAvailable", template.available(), "releaseTag", template.releaseTag());
         } catch (Exception ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to read settings");
         }
@@ -51,6 +59,11 @@ public class SibylAddonSettingsController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Configuration must be small JSON without password, token or secret fields");
         }
+        var template = templates.load(id, null);
+        if (!templates.validate(template, data)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Addon configuration does not match its schema or required fields are missing");
+        }
         jdbc.update("""
             INSERT INTO sibyl_addon_settings (addon_id, settings_json)
             VALUES (?, ?)
@@ -59,7 +72,7 @@ public class SibylAddonSettingsController {
             """, id, data.toString());
         jdbc.update("INSERT INTO sibyl_audit_events (actor, action) VALUES (?, ?)",
             principal.getName(), "addon-settings-updated:" + id);
-        return get(id);
+        return get(id, null);
     }
 
     private void validAddon(String id) {
@@ -78,7 +91,7 @@ public class SibylAddonSettingsController {
                 var entry = fields.next();
                 String key = entry.getKey();
                 if (key.length() > 64 || !key.matches("[a-zA-Z][a-zA-Z0-9_.-]*")
-                    || key.toLowerCase(Locale.ROOT).matches(".*(password|passwd|secret|token|credential|privatekey|apikey).*")
+                    || AddonConfigTemplates.secret(key)
                     || !nonSecretTree(entry.getValue(),depth+1)) return false;
             }
         } else if (node.isArray()) {
