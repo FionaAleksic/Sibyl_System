@@ -44,6 +44,8 @@ with zipfile.ZipFile(source) as archive:
         raise SystemExit("Unsafe ZIP paths")
     archive.extractall(target)
 PY
+# ZipFile.extractall respects root umask 0077; make public static files readable by nginx.
+chmod -R a+rX "/srv/sibyl/frontend-v2/releases/$release"
 ln -sfn "/srv/sibyl/frontend-v2/releases/$release" /srv/sibyl/frontend-v2/current
 # Default SELinux labels on /srv can deny Nginx static asset reads.
 semanage fcontext -a -t httpd_sys_content_t '/srv/sibyl/frontend-v2(/.*)?' 2>/dev/null || \
@@ -105,6 +107,7 @@ nginx -t
 systemctl enable --now nginx
 systemctl reload nginx
 firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$manager/32 port port=443 protocol=tcp accept"
+firewall-cmd --permanent --remove-service=cockpit || true
 firewall-cmd --reload
 echo "HTTPS frontend installed on $listen; ACL permits only $manager until admin password rotation and testing."
 echo "Certificate is temporary/self-signed. Backend must be running on $backend:8080."
