@@ -46,3 +46,18 @@ Vorgesehene Konfiguration:
 ## Unverändert
 
 VMs 200–202 bleiben bestehende Sibyl-Umgebung; 203/204 gestoppte Prototypen; 205/206 Ubuntu-V2-Labor; VM9500 Ubuntu-Vorlage. Keine dieser Instanzen wird ohne getrennte Freigabe gelöscht oder überschrieben.
+
+## Nachtrag 13.10.2026 – Betreiber hat VM207 und VM208 selbst angelegt
+
+Die ursprüngliche Planung (207/208 noch nicht vorhanden) ist durch neue Betreiberaktion überholt. Die folgende **neue Zustandsprüfung** ist maßgeblich:
+
+- `qm list` auf `NL1337-PVE-maeb` weist **VM207 `srvedge`** und **VM208 `srvbackend`** mit je **8.000 MB RAM und 32-GB-Bootdisk** aus. **Beide liegen auf demselben Node .218**, nicht auf den früher vorgesehenen unterschiedlichen Nodes.
+- VM207 war bereits `running`; VM208 wurde im Rahmen dieser Fortsetzung durch `qm start 208` erfolgreich gestartet und der Status anschließend als `running` bestätigt.
+- Die ursprünglich geplanten IPs **172.22.120.247** und **172.22.120.248** antworten auch nach dem Start nicht auf ICMP. Keine erfolgreiche SSH-Verbindung zu diesen IPs nachgewiesen. Deshalb keine Deploy-Aktionen in den Gast-VMS möglich.
+- `qm guest cmd 208 network-get-interfaces` meldete **`No QEMU guest agent configured`**.
+- `qm terminal 207` und `qm terminal 208` meldeten jeweils **`unable to find a serial interface`**. Beide VMs benötigen die Proxmox-Grafikkonsole zur Überprüfung von Boot-/Installerzustand und Netz.
+- Read-only-`qm config`-Abfragen für 207/208 über Remote Desktop Commander wurden durch den Fernzugriff-Sicherheitscheck geblockt. Nicht durch andere Verwaltungswege umgangen.
+- **Keine Aussage möglich**, ob Rocky Linux in den beiden Gästen schon fertig installiert wurde. Zuletzt keine erfolgreiche Web-/API-Bereitstellung, keine Berücksichtigung als produktionsbereit.
+- Alte Sibyl-VMs 200–206 und Ubuntu-Vorlage 9500 bleiben unverändert.
+
+**Operator-Schritt, Proxmox GUI:** VM207 und VM208 einzeln über `Konsole` öffnen, prüfen ob Installer oder installiertes Rocky 10 läuft; falls Installer, die Rocky-10-Installation fertigstellen. Nach Login im Gast die Netzwerkkonfiguration mit `ip -br addr`, `nmcli con show --active` prüfen und die **von IPAM bestätigten** vorgesehenen Adressen `.247/24` (Frontend) und `.248/24` (Backend) mit Gateway `172.22.120.1` und DNS `172.22.100.202` setzen; Passwortlogin nach sicherem Einspielen des SSH-Public-Keys einschränken, ohne sich auszusperren. `sudo dnf install -y qemu-guest-agent && sudo systemctl enable --now qemu-guest-agent`. Ein Proxmox-VM-Agent muss außerdem in den **Optionen der VM** aktiviert sein. Sobald SSH auf beiden VMs als `fiona` funktioniert, erst Installer aus `deploy/rocky10/` ausführen. Beim Backend sind vor Freigabe die neuen Rocky-MySQL-8.4-Details durch echten Integrationstest zu validieren.
