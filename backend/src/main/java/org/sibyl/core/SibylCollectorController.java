@@ -18,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping("/api/v1/collector")
-public final class SibylCollectorController {
+public class SibylCollectorController {
     private final CollectorProof proof;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
