@@ -15,7 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping("/api/v1/security")
-public final class SibylSecurityInventoryController {
+public class SibylSecurityInventoryController {
     private final JdbcTemplate jdbc;
     public SibylSecurityInventoryController(JdbcTemplate jdbc) { this.jdbc=jdbc; }
 
