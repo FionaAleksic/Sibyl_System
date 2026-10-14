@@ -15,7 +15,9 @@ public final class CorePermissions {
 
     public static List<String> forRole(String role) {
         return switch (role) {
-            case "ADMIN" -> List.of("audit.read", "accounts.manage", "settings.manage", "addons.manage");
+            case "ADMIN" -> List.of("audit.read", "accounts.manage", "settings.manage", "addons.manage",
+                "inventory.read", "networks.manage", "alerts.manage");
+            case "SECURITY_OPERATOR" -> List.of("inventory.read", "networks.manage", "alerts.manage");
             case "AUDITOR" -> List.of("audit.read");
             case "USER" -> List.of();
             default -> throw new IllegalArgumentException("Unrecognized account role");

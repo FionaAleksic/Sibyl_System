@@ -77,7 +77,8 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
         if (username == null || !username.matches("[a-zA-Z][a-zA-Z0-9._-]{2,49}")
             || password == null || password.length() < 12 || password.length() > 128
             || password.equals("friend")
-            || !("USER".equals(role) || "ADMIN".equals(role) || "AUDITOR".equals(role))) {
+            || !("USER".equals(role) || "ADMIN".equals(role) || "AUDITOR".equals(role)
+                || "SECURITY_OPERATOR".equals(role))) {
             throw new IllegalArgumentException("Invalid account fields");
         }
         String normalized = username.toLowerCase(Locale.ROOT);
