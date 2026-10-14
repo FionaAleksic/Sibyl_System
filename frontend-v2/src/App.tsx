@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import SecurityPanel from "./SecurityPanel";
 import { fetchAudit, loadShell, safeModulePage, type AuditEvent, type Module, type ShellState } from "./api";
 
 function Symbol({ text }: { text: string }) {
@@ -117,6 +118,8 @@ export default function App() {
       <div className="side-heading">PLATTFORM</div>
       <button className={"nav-item " + (section === "home" ? "selected" : "")}
               onClick={() => setSection("home")}><Symbol text="⌂" /> Übersicht</button>
+      {state.canMonitor && <button className={"nav-item " + (section === "security" ? "selected" : "")}
+        onClick={() => setSection("security")}><Symbol text="▣" /><span>Netzwerk & Endpoints</span></button>}
       {state.canAudit && <button className={"nav-item " + (section === "audit" ? "selected" : "")}
         onClick={() => setSection("audit")}><Symbol text="≡" /><span>Sicherheits-Audit</span></button>}
       {state.admin && <>
@@ -131,11 +134,12 @@ export default function App() {
     </aside>
     <div className="workspace">
       <header className="topbar"><div><strong>Sibyl</strong><span className="separator"> / </span>
-        <span className="secondary">{selected?.name || (section === "audit" ? "Sicherheits-Audit" : "Übersicht")}</span></div>
+        <span className="secondary">{selected?.name || (section === "audit" ? "Sicherheits-Audit" : section === "security" ? "Netzwerk & Endpoints" : "Übersicht")}</span></div>
         <span className="environment-tag">{import.meta.env.VITE_SIBYL_ENV_LABEL || "Vorschau"}</span>
       </header>
       <main className="content">
-        {section === "audit" && state.canAudit ? <AuditPanel /> : section === "admin" ? <>
+        {section === "security" && state.canMonitor ? <SecurityPanel /> :
+        section === "audit" && state.canAudit ? <AuditPanel /> : section === "admin" ? <>
           <p className="eyebrow">VERWALTUNG</p><h1>Administration</h1>
           <p className="lead">Konten, Addons und Einstellungen bleiben serverseitig geschützt.</p>
           <div className="panel"><h2>Addons & Berechtigungen</h2>

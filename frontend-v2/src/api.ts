@@ -10,7 +10,7 @@ export type Module = {
 export type ShellState =
   | { kind: "loading" }
   | { kind: "login" }
-  | { kind: "ready"; modules: Module[]; admin: boolean; canAudit: boolean }
+  | { kind: "ready"; modules: Module[]; admin: boolean; canAudit: boolean; canMonitor: boolean }
   | { kind: "error"; message: string };
 
 async function request(path: string, signal?: AbortSignal): Promise<Response> {
@@ -48,7 +48,7 @@ export async function loadShell(signal: AbortSignal): Promise<ShellState> {
     const role = "role" in details ? details.role : undefined;
     const mustChange = "mustChangePassword" in details ? details.mustChangePassword : false;
     if (mustChange === true) return { kind: "login" };
-    return { kind: "ready", modules, admin: role === "ADMIN", canAudit: role === "ADMIN" || role === "AUDITOR" };
+    return { kind: "ready", modules, admin: role === "ADMIN", canAudit: role === "ADMIN" || role === "AUDITOR", canMonitor: role === "ADMIN" || role === "SECURITY_OPERATOR" };
   } catch (error) {
     if (signal.aborted) return { kind: "loading" };
     return { kind: "error", message: error instanceof Error ? error.message : "Verbindungsfehler" };

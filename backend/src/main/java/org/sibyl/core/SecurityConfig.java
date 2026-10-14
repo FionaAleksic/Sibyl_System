@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -15,9 +16,23 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 /** Default deny with distinct API (401) and browser (login redirect) chains. */
 @Configuration
 public class SecurityConfig {
-    /** API requests NEVER redirect to HTML, even without an Accept header. */
+    /** Machine-only collector chain: HMAC validation is mandatory in the controller. */
     @Bean
     @Order(1)
+    SecurityFilterChain collectorSecurity(HttpSecurity http) throws Exception {
+        http.securityMatcher("/api/v1/collector/**")
+            .authorizeHttpRequests(registry -> registry
+                .requestMatchers(HttpMethod.POST, "/api/v1/collector/snapshot").permitAll()
+                .anyRequest().denyAll())
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .csrf(csrf -> csrf.disable());
+        return http.build();
+    }
+
+    /** API requests NEVER redirect to HTML, even without an Accept header. */
+    @Bean
+    @Order(2)
     SecurityFilterChain apiSecurity(HttpSecurity http, SibylAccounts accounts) throws Exception {
         http.securityMatcher("/api/**")
             .authorizeHttpRequests(registry -> registry
@@ -30,6 +45,15 @@ public class SecurityConfig {
                     .hasAuthority("settings.manage")
                 .requestMatchers("/api/v1/admin/addon-settings/**", "/api/v1/admin/addons/**",
                                  "/api/v1/addons/**").hasAuthority("addons.manage")
+                .requestMatchers(HttpMethod.GET,
+                    "/api/v1/security/summary", "/api/v1/security/assets",
+                    "/api/v1/security/alerts", "/api/v1/security/networks")
+                    .hasAuthority("inventory.read")
+                .requestMatchers(HttpMethod.POST, "/api/v1/security/networks")
+                    .hasAuthority("networks.manage")
+                .requestMatchers(HttpMethod.POST, "/api/v1/security/alerts/*/ack")
+                    .hasAuthority("alerts.manage")
+                .requestMatchers("/api/v1/security/**").denyAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/auth/**", "/api/v1/settings/public", "/api/v1/modules", "/api/v1/modules/**", "/api/v1/extensions", "/api/v1/ext/**").authenticated()
                 .anyRequest().denyAll())
@@ -47,7 +71,7 @@ public class SecurityConfig {
 
     /** The only anonymous website is /login.html plus its CSS/JS. */
     @Bean
-    @Order(2)
+    @Order(3)
     SecurityFilterChain webSecurity(HttpSecurity http, SibylAccounts accounts) throws Exception {
         http.authorizeHttpRequests(registry -> registry
                 .requestMatchers("/preview/**").denyAll()

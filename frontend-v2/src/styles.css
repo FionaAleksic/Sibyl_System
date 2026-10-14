@@ -187,3 +187,8 @@ h3 { font-size: 15px; margin: 0 0 5px; font-weight: 650; }
 .audit-table th { font-weight: 700; }
 .audit-table td:nth-child(1) { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .audit-table td:nth-child(2) { overflow-wrap: anywhere; }
+
+.security-network-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 16px; }
+.security-network-form label { display: grid; gap: 6px; min-width: 185px; font-size: .9rem; }
+.security-network-form input { border-radius: 0; padding: 9px; border: 1px solid #777;
+  background: transparent; color: inherit; }
