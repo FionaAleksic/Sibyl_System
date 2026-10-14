@@ -161,4 +161,36 @@ class SibylInstallationTests {
         mvc.perform(get("/").session(userSession))
             .andExpect(status().is3xxRedirection());
     }
+    @Test @Order(9)
+    void auditIsLeastPrivilegeAndCursorLimited() throws Exception {
+        mvc.perform(get("/api/v1/admin/audit"))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/admin/audit").session(adminSession))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items").isArray());
+        mvc.perform(get("/api/v1/admin/audit?limit=101").session(adminSession))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/admin/audit?before=0").session(adminSession))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/users").session(adminSession).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"username\":\"audit.reader\",\"role\":\"AUDITOR\",\"password\":\"Audit-Initial-2026!\"}"))
+            .andExpect(status().isCreated());
+        MockHttpSession auditor = signIn("audit.reader", "Audit-Initial-2026!");
+        mvc.perform(get("/api/v1/admin/audit").session(auditor))
+            .andExpect(status().isLocked());
+        mvc.perform(post("/api/v1/auth/password").session(auditor).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"currentPassword\":\"Audit-Initial-2026!\",\"newPassword\":\"Audit-Rotated-2026!\"}"))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/audit?limit=2").session(auditor))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2));
+        mvc.perform(get("/api/v1/admin/users").session(auditor))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/addons.html").session(auditor))
+            .andExpect(status().isForbidden());
+    }
+
+
 }

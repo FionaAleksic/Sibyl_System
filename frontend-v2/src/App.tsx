@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadShell, safeModulePage, type Module, type ShellState } from "./api";
+import { fetchAudit, loadShell, safeModulePage, type AuditEvent, type Module, type ShellState } from "./api";
 
 function Symbol({ text }: { text: string }) {
   return <span className="symbol" aria-hidden="true">{text}</span>;
@@ -19,6 +19,59 @@ function ModuleCard({ module }: { module: Module }) {
         <span className="secondary small">Noch keine aktive Seite</span>}
     </article>
   );
+}
+
+/** Bounded, read-only organizational events. No employee activity profiling. */
+function AuditPanel() {
+  const [items, setItems] = useState<AuditEvent[]>([]);
+  const [before, setBefore] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [more, setMore] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    void fetchAudit(before, controller.signal).then(next => {
+      if (controller.signal.aborted) return;
+      setItems(existing => before === null ? next : [...existing, ...next]);
+      setMore(next.length === 50);
+      setLoading(false);
+    }).catch(err => {
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : "Fehler beim Laden");
+        setLoading(false);
+      }
+    });
+    return () => controller.abort();
+  }, [before]);
+
+  return <section aria-label="Sicherheits-Audit">
+    <p className="eyebrow">BETRIEB & SICHERHEIT</p>
+    <h1>Audit-Protokoll</h1>
+    <p className="lead">Nachvollziehbare administrative Aktionen und Anmeldungen.
+      Nur für berechtigte Administratoren und Auditoren.</p>
+    <div className="panel">
+      <h2>Letzte Ereignisse</h2>
+      {error && <p role="alert">{error}</p>}
+      {!loading && items.length === 0 && <p>Keine Ereignisse vorhanden.</p>}
+      {items.length > 0 && <div className="audit-scroll">
+        <table className="audit-table">
+          <thead><tr><th>Zeit (UTC)</th><th>Konto</th><th>Ereignis</th></tr></thead>
+          <tbody>{items.map(e => <tr key={e.id}>
+            <td>{e.createdAt.replace("T", " ").replace("Z", "")}</td>
+            <td>{e.actor}</td><td>{e.action}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
+      {loading && <p role="status">Audit-Ereignisse werden geladen …</p>}
+      {!loading && more && <button className="primary-button"
+         onClick={() => setBefore(items[items.length - 1]?.id ?? null)}>
+         Ältere Ereignisse anzeigen
+      </button>}
+    </div>
+  </section>;
 }
 
 export default function App() {
@@ -64,6 +117,8 @@ export default function App() {
       <div className="side-heading">PLATTFORM</div>
       <button className={"nav-item " + (section === "home" ? "selected" : "")}
               onClick={() => setSection("home")}><Symbol text="⌂" /> Übersicht</button>
+      {state.canAudit && <button className={"nav-item " + (section === "audit" ? "selected" : "")}
+        onClick={() => setSection("audit")}><Symbol text="≡" /><span>Sicherheits-Audit</span></button>}
       {state.admin && <>
         <a className="nav-item" href="/addons.html"><Symbol text="▦" /><span>Addon-Browser</span></a>
         <a className="nav-item" href="/admin.html"><Symbol text="⚙" /><span>Administration</span></a>
@@ -76,11 +131,11 @@ export default function App() {
     </aside>
     <div className="workspace">
       <header className="topbar"><div><strong>Sibyl</strong><span className="separator"> / </span>
-        <span className="secondary">{selected?.name || (section === "admin" ? "Administration" : "Übersicht")}</span></div>
+        <span className="secondary">{selected?.name || (section === "audit" ? "Sicherheits-Audit" : "Übersicht")}</span></div>
         <span className="environment-tag">{import.meta.env.VITE_SIBYL_ENV_LABEL || "Vorschau"}</span>
       </header>
       <main className="content">
-        {section === "admin" ? <>
+        {section === "audit" && state.canAudit ? <AuditPanel /> : section === "admin" ? <>
           <p className="eyebrow">VERWALTUNG</p><h1>Administration</h1>
           <p className="lead">Konten, Addons und Einstellungen bleiben serverseitig geschützt.</p>
           <div className="panel"><h2>Addons & Berechtigungen</h2>

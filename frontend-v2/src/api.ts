@@ -10,7 +10,7 @@ export type Module = {
 export type ShellState =
   | { kind: "loading" }
   | { kind: "login" }
-  | { kind: "ready"; modules: Module[]; admin: boolean }
+  | { kind: "ready"; modules: Module[]; admin: boolean; canAudit: boolean }
   | { kind: "error"; message: string };
 
 async function request(path: string, signal?: AbortSignal): Promise<Response> {
@@ -48,7 +48,7 @@ export async function loadShell(signal: AbortSignal): Promise<ShellState> {
     const role = "role" in details ? details.role : undefined;
     const mustChange = "mustChangePassword" in details ? details.mustChangePassword : false;
     if (mustChange === true) return { kind: "login" };
-    return { kind: "ready", modules, admin: role === "ADMIN" };
+    return { kind: "ready", modules, admin: role === "ADMIN", canAudit: role === "ADMIN" || role === "AUDITOR" };
   } catch (error) {
     if (signal.aborted) return { kind: "loading" };
     return { kind: "error", message: error instanceof Error ? error.message : "Verbindungsfehler" };
@@ -58,4 +58,31 @@ export async function loadShell(signal: AbortSignal): Promise<ShellState> {
 export function safeModulePage(page: string | undefined): string | undefined {
   if (!page || page.length > 200 || !/^\/(?!\/)[A-Za-z0-9/_?=&.%+-]+$/.test(page)) return undefined;
   return page;
+}
+
+
+export type AuditEvent = {
+  id: number;
+  actor: string;
+  action: string;
+  createdAt: string;
+};
+
+export async function fetchAudit(before: number | null, signal: AbortSignal): Promise<AuditEvent[]> {
+  const endpoint = "/api/v1/admin/audit?limit=50" + (before === null ? "" : "&before=" + before);
+  const response = await request(endpoint, signal);
+  if (!response.ok) throw new Error(
+    response.status === 403 ? "Keine Leseberechtigung für das Audit-Protokoll." :
+    "Das Audit-Protokoll ist derzeit nicht erreichbar."
+  );
+  const payload: unknown = await response.json();
+  if (typeof payload !== "object" || payload === null || !("items" in payload) ||
+      !Array.isArray(payload.items)) throw new Error("Ungültige Audit-Antwort.");
+  return payload.items.filter((item: unknown): item is AuditEvent =>
+    typeof item === "object" && item !== null &&
+    "id" in item && typeof item.id === "number" && Number.isSafeInteger(item.id) && item.id > 0 &&
+    "actor" in item && typeof item.actor === "string" &&
+    "action" in item && typeof item.action === "string" &&
+    "createdAt" in item && typeof item.createdAt === "string"
+  );
 }
