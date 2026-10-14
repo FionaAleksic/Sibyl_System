@@ -22,7 +22,15 @@ public class SecurityConfig {
         http.securityMatcher("/api/**")
             .authorizeHttpRequests(registry -> registry
                 .requestMatchers("/api/v1/auth/csrf").permitAll()
-                .requestMatchers("/api/v1/admin/**", "/api/v1/addons/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/admin/audit", "/api/v1/admin/audit/**")
+                    .hasAuthority("audit.read")
+                .requestMatchers("/api/v1/admin/users", "/api/v1/admin/users/**")
+                    .hasAuthority("accounts.manage")
+                .requestMatchers("/api/v1/admin/settings")
+                    .hasAuthority("settings.manage")
+                .requestMatchers("/api/v1/admin/addon-settings/**", "/api/v1/admin/addons/**",
+                                 "/api/v1/addons/**").hasAuthority("addons.manage")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/auth/**", "/api/v1/settings/public", "/api/v1/modules", "/api/v1/modules/**", "/api/v1/extensions", "/api/v1/ext/**").authenticated()
                 .anyRequest().denyAll())
             .exceptionHandling(errors -> errors
@@ -45,16 +53,22 @@ public class SecurityConfig {
                 .requestMatchers("/preview/**").denyAll()
                 .requestMatchers("/login.html", "/login.css", "/login.js",
                                  "/login", "/actuator/health").permitAll()
+                .requestMatchers("/audit.html", "/audit.js")
+                    .hasAnyRole("ADMIN", "AUDITOR")
                 .requestMatchers("/admin.html", "/admin.js", "/addons.html",
                                  "/addons.js", "/catalog.json").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .formLogin(form -> form
                 .loginPage("/login.html")
                 .loginProcessingUrl("/login")
-                .successHandler((request, response, authentication) ->
-                    response.setStatus(HttpServletResponse.SC_NO_CONTENT))
-                .failureHandler((request, response, exception) ->
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+                .successHandler((request, response, authentication) -> {
+                    accounts.recordAuthentication(authentication.getName(), true);
+                    response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                })
+                .failureHandler((request, response, exception) -> {
+                    accounts.recordAuthentication(request.getParameter("username"), false);
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                })
                 .permitAll())
             .logout(logout -> logout.logoutUrl("/logout")
                 .logoutSuccessHandler((request, response, authentication) ->

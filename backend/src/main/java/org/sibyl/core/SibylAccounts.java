@@ -41,7 +41,7 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
             "SELECT username, password_hash, role, enabled FROM sibyl_users WHERE username=?",
             (rs, row) -> User.withUsername(rs.getString("username"))
                 .password("{bcrypt}" + rs.getString("password_hash"))
-                .roles(rs.getString("role"))
+                .authorities(CorePermissions.authorities(rs.getString("role")))
                 .disabled(!rs.getBoolean("enabled")).build(),
             username
         );
@@ -59,6 +59,7 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
         String role = jdbc.queryForObject(
             "SELECT role FROM sibyl_users WHERE username=?", String.class, username);
         return Map.of("username", username, "role", role,
+            "permissions", CorePermissions.forRole(role),
             "mustChangePassword", mustChangePassword(username));
     }
 
@@ -76,7 +77,7 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
         if (username == null || !username.matches("[a-zA-Z][a-zA-Z0-9._-]{2,49}")
             || password == null || password.length() < 12 || password.length() > 128
             || password.equals("friend")
-            || !("USER".equals(role) || "ADMIN".equals(role))) {
+            || !("USER".equals(role) || "ADMIN".equals(role) || "AUDITOR".equals(role))) {
             throw new IllegalArgumentException("Invalid account fields");
         }
         String normalized = username.toLowerCase(Locale.ROOT);
@@ -88,6 +89,14 @@ public class SibylAccounts implements UserDetailsService, ApplicationRunner {
         jdbc.update("INSERT INTO sibyl_audit_events (actor, action) VALUES (?, ?)",
             actor, "account-created:" + normalized + ":" + role);
         return new AccountInfo(normalized, role, true, true);
+    }
+
+    /** Log only bounded, validated actor names. Never persist submitted passwords. */
+    public void recordAuthentication(String actor, boolean success) {
+        String safeActor = actor != null && actor.matches("[a-zA-Z][a-zA-Z0-9._-]{2,49}")
+            ? actor.toLowerCase(Locale.ROOT) : "unknown";
+        jdbc.update("INSERT INTO sibyl_audit_events(actor,action) VALUES (?,?)",
+            safeActor, success ? "authentication-success" : "authentication-failed");
     }
 
     @Transactional
