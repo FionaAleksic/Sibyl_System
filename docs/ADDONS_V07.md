@@ -32,7 +32,8 @@ Der kompiliert vorliegende Core-Entwicklungsstand ist auf der internen Arbeitsma
 
 - TypeScript `tsc -b` und Vite Produktionsbuild: bestanden.
 - Maven `test package` (Java 21, Spring Boot): bestanden.
-- Vor dem Deploy sind die Migration auf einer isolierten MySQL-Instanz und echte API-/RBAC-Tests nachzuweisen.
+- Isolierter Smoke-Test auf MySQL 8.4 bestanden: Spring-Backend startet, Flyway V7 registriert drei Addons, beide Abhängigkeiten und alle drei Tabellen sind vorhanden; anonyme API-Zugriffe wurden mit HTTP 401 verweigert.
+- Authentifizierte CRUD-/RBAC-Tests wurden zusätzlich angestoßen; ihr Ergebnis konnte wegen des ausgeschöpften Remote-Werkzeugkontingents nicht abschließend ausgelesen werden. Sie gelten daher nicht als bestanden.
 - Testdeploy ist ausstehend: SSH-Zugang zu den zugehörigen Sibyl-VMs fehlgeschlagen; Proxmox QEMU Guest Agent verweigert `guest-exec`. Keine Sicherheitsrichtlinien umgangen.
 
 ## Live-Freigabe-Kriterien
