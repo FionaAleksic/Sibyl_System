@@ -1,0 +1,25 @@
+/* Workflow addons share Sibyl's squared, utilitarian design. */
+.sibyl-addon-section{border:1px solid var(--border,#3a414a);padding:18px;margin:20px 0;background:var(--panel,#141a21)}
+.sibyl-addon-section h2{font-size:1.18rem;margin:0 0 14px}
+.sibyl-addon-section h3{font-size:1rem;margin:14px 0 8px}
+.sibyl-inline-fields{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:10px 0}
+.sibyl-inline-fields h2{margin:0 20px 0 0}
+.sibyl-inline-fields label{display:flex;flex-direction:column;gap:6px;min-width:130px}
+.sibyl-addon-section input,.sibyl-addon-section textarea{border:1px solid #657080;background:transparent;color:inherit;padding:9px;max-width:100%;border-radius:0;font:inherit}
+.sibyl-addon-section input[type=number]{max-width:160px}
+.sibyl-addon-section button{border-radius:0;cursor:pointer}
+.sibyl-addon-section button:disabled{opacity:.5;cursor:not-allowed}
+.sibyl-table{width:100%;border-collapse:collapse;margin-top:12px}
+.sibyl-table th,.sibyl-table td{text-align:left;border-bottom:1px solid #515966;padding:10px}
+.sibyl-table th{font-size:.85rem;text-transform:uppercase;letter-spacing:.02em}
+.sibyl-people{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.sibyl-people>div{display:flex;gap:20px;align-items:center;justify-content:space-between;border-bottom:1px solid #424852;padding:6px 0}
+.sibyl-report-form{display:flex;flex-direction:column;gap:14px}
+.sibyl-report-form>label,.sibyl-review>label{display:flex;flex-direction:column;gap:6px}
+.sibyl-report-items{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+.sibyl-report-item{padding:16px;border:1px solid #525b66}
+.sibyl-report-item h3{margin:0}
+.sibyl-report-description{white-space:pre-wrap;overflow-wrap:anywhere}
+.sibyl-review{border-top:1px solid #525b66;margin-top:14px;padding-top:12px}
+.sibyl-review textarea{width:100%}
+@media(max-width:600px){.sibyl-table{font-size:.85rem}.sibyl-table td,.sibyl-table th{padding:5px}}
