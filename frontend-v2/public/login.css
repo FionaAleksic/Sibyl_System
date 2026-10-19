@@ -1,0 +1,34 @@
+/* Sibyl login — same square editorial visual language as React V2 and Admin. */
+:root {
+  color-scheme: light;
+  --bg:#f4f5f6;--surface:#fff;--surface-2:#eceff1;--text:#15191d;--muted:#5d6872;
+  --border:#b8c0c7;--accent:#1c5d8f;--accent-hover:#164a71;--accent-text:#fff;
+  --error:#a32121;--focus:#0069c2;
+}
+@media(prefers-color-scheme:dark) {
+  :root {color-scheme:dark;--bg:#111416;--surface:#181c20;--surface-2:#20262b;--text:#edf1f4;
+    --muted:#a9b2ba;--border:#3d464e;--accent:#4d91c8;--accent-hover:#68a5d6;
+    --accent-text:#081018;--error:#e36b6b;--focus:#79b8e8}
+}
+* { box-sizing:border-box; border-radius:0; }
+html,body { min-height:100%; }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 "Segoe UI",Arial,sans-serif; }
+.auth-shell { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:38px 18px; }
+.auth-card { width:min(100%,428px); padding:33px 34px 30px; background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--accent); }
+.brand { display:flex; align-items:center; gap:11px; font-weight:700; font-size:16px; letter-spacing:-.02em; }
+.brand-mark { display:grid; place-items:center; flex:none; width:34px; height:34px; background:var(--text); color:var(--surface); font-size:18px; font-weight:800; }
+.divider { height:1px; background:var(--border); margin:27px 0 26px; }
+.eyebrow { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-weight:700; margin:0 0 8px; }
+h1 { font-size:29px; line-height:1.2; letter-spacing:-.025em; font-weight:650; margin:0 0 12px; }
+.sub { color:var(--muted); font-size:14px; line-height:1.65; margin:0 0 23px; }
+label { display:block; margin:18px 0 6px; font-size:13px; font-weight:650; }
+input { width:100%; padding:11px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text); font:inherit; min-height:43px; }
+input:focus-visible,button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+button { display:flex; justify-content:space-between; align-items:center; gap:12px; width:100%; padding:11px 14px; min-height:44px; margin-top:26px; background:var(--accent); color:var(--accent-text); border:1px solid var(--accent); font:650 14px/1.4 "Segoe UI",Arial,sans-serif; cursor:pointer; text-align:left; }
+button:hover:not(:disabled) { background:var(--accent-hover); }
+button:disabled { opacity:.5; cursor:wait; }
+#auth-message { color:var(--error); font-size:13px; min-height:20px; margin:18px 0 0; }
+footer { width:min(100%,428px); color:var(--muted); font-size:12px; line-height:1.5; text-align:left; padding:14px 0 0 3px; }
+[hidden] { display:none !important; }
+@media(min-width:700px) { .auth-card,footer { transform:translateX(-18px); } }
+@media(max-width:480px) { .auth-card { padding:25px 22px; } .auth-shell { padding:25px 13px; } }
